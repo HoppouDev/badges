@@ -1,6 +1,7 @@
 //! Devin's Badges style (cozy) badge API on Cloudflare Workers
 //!
-//! Everything except [`fetch`] and [`service`] is runtime-free and tested natively
+//! Everything except [`fetch`] and [`service`] is runtime-free and tested
+//! natively
 
 pub mod api;
 pub mod badge;
