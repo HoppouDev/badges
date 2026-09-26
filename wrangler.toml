@@ -1,0 +1,11 @@
+name = "badges"
+main = "build/index.js"
+compatibility_date = "2026-09-26"
+
+[build]
+command = "cargo install -q --locked \"worker-build@=0.8.7\" && worker-build --release --panic-unwind"
+
+# Hosts allowed for icon=https://... (comma-separated; empty disables remote icons).
+# Unset uses DEFAULT_ICON_HOSTS in src/icon.rs.
+# [vars]
+# ICON_HOSTS = "raw.githubusercontent.com,cdn.jsdelivr.net"

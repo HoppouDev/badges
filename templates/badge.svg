@@ -1,0 +1,56 @@
+{%- macro shadow(uid, name, s) -%}
+    <filter id="{{ uid }}-{{ name }}" width="{{ s.width }}" height="{{ s.height }}" x="{{ s.x }}" y="{{ s.y }}" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feColorMatrix in="SourceAlpha" result="hardAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" />
+      <feOffset />
+      <feGaussianBlur stdDeviation="{{ s.blur }}" />
+      <feComposite in2="hardAlpha" operator="out" />
+      <feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0" />
+      <feBlend in2="BackgroundImageFix" result="effect1_dropShadow" />
+      <feBlend in="SourceGraphic" in2="effect1_dropShadow" result="shape" />
+    </filter>
+{%- endmacro -%}
+<svg xmlns="http://www.w3.org/2000/svg" width="{{ width }}" height="{{ height }}" fill="none" viewBox="0 0 {{ width }} {{ height }}" role="img" aria-label="{{ alt }}">
+  <title>{{ alt }}</title>
+  <rect width="{{ width }}" height="{{ height }}" fill="url(#{{ uid }}-bg)" rx="{{ radius }}" />
+  <rect width="{{ border.width }}" height="{{ border.height }}" x="{{ border.inset }}" y="{{ border.inset }}" stroke="#fff" stroke-opacity=".15" stroke-width="{{ border.stroke }}" rx="{{ border.radius }}" />
+  {%- if let Some(icon) = icon %}
+  <g filter="url(#{{ uid }}-icon-shadow)">
+    <g clip-path="url(#{{ uid }}-icon-clip)">
+      {%- match icon %}
+      {%- when Icon::Path(d) %}
+      <svg x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" viewBox="0 0 24 24">
+        <path fill="{{ palette.icon }}" d="{{ d }}" />
+      </svg>
+      {%- when Icon::Image(uri) %}
+      <image x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" preserveAspectRatio="xMidYMid meet" href="{{ uri }}" />
+      {%- endmatch %}
+    </g>
+  </g>
+  {%- endif %}
+  <g filter="url(#{{ uid }}-text-shadow)">
+    {%- if let Some(d) = title_path %}
+    <path fill="{{ palette.title }}" d="{{ d }}" />
+    {%- endif %}
+    <path fill="{% if label_gradient.is_some() %}url(#{{ uid }}-label-fill){% else %}{{ palette.label }}{% endif %}" d="{{ label_path }}" />
+  </g>
+  <defs>
+    {%- if icon.is_some() %}
+    {% call shadow(uid, "icon-shadow", icon_shadow) %}{% endcall %}
+    <clipPath id="{{ uid }}-icon-clip">
+      <rect x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" fill="#fff" />
+    </clipPath>
+    {%- endif %}
+    {% call shadow(uid, "text-shadow", text_shadow) %}{% endcall %}
+    <linearGradient id="{{ uid }}-bg" x1="{{ bg_gradient_x }}" x2="{{ bg_gradient_x }}" y1="0" y2="{{ height }}" gradientUnits="userSpaceOnUse">
+      <stop stop-color="{{ palette.bg_top }}" />
+      <stop offset="1" stop-color="{{ palette.bg_bottom }}" />
+    </linearGradient>
+    {%- if let Some(g) = label_gradient %}
+    <linearGradient id="{{ uid }}-label-fill" x1="{{ g.x }}" x2="{{ g.x }}" y1="{{ g.y1 }}" y2="{{ g.y2 }}" gradientUnits="userSpaceOnUse">
+      <stop stop-color="{{ palette.label }}" />
+      <stop offset="1" stop-color="{{ g.to }}" />
+    </linearGradient>
+    {%- endif %}
+  </defs>
+</svg>
