@@ -2,6 +2,7 @@
 name = "badges"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -21,13 +22,13 @@ svgtypes = "0.16"
 thiserror = "2"
 url = "2"
 
+[dev-dependencies]
+serde_urlencoded = "0.7"
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 futures-util = { version = "0.3", default-features = false }
 tower-service = "0.3.3"
 worker = { version = "0.8", features = ["axum", "http"] }
-
-[dev-dependencies]
-serde_urlencoded = "0.7"
 
 [profile.release]
 opt-level = "z"
