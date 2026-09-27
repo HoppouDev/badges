@@ -5,7 +5,9 @@
 
 pub mod api;
 pub mod badge;
+pub mod ci;
 pub mod color;
+mod fetch_error;
 pub mod icon;
 mod svg;
 mod text;

@@ -12,12 +12,15 @@ askama = "0.16.1"
 axum = { version = "0.8", default-features = false, features = ["query"] }
 base64 = "0.22"
 csscolorparser = "0.8"
+gix-validate = "0.12"
+headers = "0.4"
 infer = { version = "0.19", default-features = false }
 mime = "0.3"
 palette = { version = "0.7", default-features = false, features = ["std"] }
 roxmltree = "0.21"
 rustybuzz = "0.20.1"
 serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1"
 svgtypes = "0.16"
 thiserror = "2"
 url = "2"

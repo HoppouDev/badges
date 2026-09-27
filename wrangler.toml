@@ -9,3 +9,7 @@ command = "cargo install -q --locked \"worker-build@=0.8.7\" && worker-build --r
 # Unset uses DEFAULT_ICON_HOSTS in src/icon.rs.
 # [vars]
 # ICON_HOSTS = "raw.githubusercontent.com,cdn.jsdelivr.net"
+
+# /ci badges read GitHub Actions runs with the GITHUB_TOKEN secret and answer
+# 503 without it. Only public repositories are served, whatever the token sees:
+#   npx wrangler secret put GITHUB_TOKEN
