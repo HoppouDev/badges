@@ -1,17 +1,18 @@
 <div align="center">
 
-# ʙᴀᴅɢᴇꜱ
+# 🛡️ ʙᴀᴅɢᴇꜱ 🛡️
 
-A silly badges API, in the cozy style of [Devin's Badges](https://github.com/intergrav/devins-badges).
+A silly badges API, based on [Devin's Badges](https://github.com/intergrav/devins-badges).
 
-<a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI Passing" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml"></a>
-<a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=rust"></a>
+<a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=rust&style=cozy"></a>
+<a href="https://badges.hoppou.dev"><img alt="Deployed on Cloudfare" src="https://badges.hoppou.dev/badge?title=Deployed%20on&label=Cloudfare&color=f38020&icon=cloudflare&style=cozy"></a>
+<a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI Passing" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=cozy"></a>
 
 </div>
 
 ## Usage
 
-Badges are SVGs served by a Cloudflare Worker at `https://badges.hoppou.dev`. Open `/` for the full parameter list.
+Badges are SVGs served by a Cloudflare Worker at `https://badges.hoppou.dev`. The full parameter list is served at `/`.
 
 ### Custom badge
 
