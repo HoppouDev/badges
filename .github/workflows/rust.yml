@@ -1,0 +1,59 @@
+---
+name: Rust
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        # yamllint disable-line rule:line-length
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Installs rustup if missing (e.g. act images), then the channel and
+      # wasm target pinned in rust-toolchain.toml
+      - name: Install toolchain
+        # yamllint disable-line rule:line-length
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          components: clippy, rustfmt
+          cache: false
+
+      - name: Cache
+        # yamllint disable-line rule:line-length
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked
+
+      - name: Clippy (wasm)
+        run: cargo clippy --workspace --target wasm32-unknown-unknown --locked
+
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+
+      - name: Build (wasm)
+        run: cargo build --target wasm32-unknown-unknown --release --locked
