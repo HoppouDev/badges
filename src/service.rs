@@ -135,9 +135,7 @@ async fn ci_badge(
 	)
 	.await
 	{
-		Ok(run_state) => {
-			api::respond_ci(run_state, params.title.as_deref(), Some(ci::icon().clone()))
-		}
+		Ok(run_state) => api::respond_ci(run_state, &params, Some(ci::icon().clone())),
 		Err(e) => error_response(e),
 	}
 }
@@ -153,7 +151,7 @@ async fn ci_state(
 ) -> Result<CiState, ApiError> {
 	let workflow = Workflow::new(owner, repo, workflow_file)?;
 	let (branch, event) = (params.branch()?, params.event()?);
-	ci::spec(CiState::Unknown, params.title.as_deref(), None)?;
+	ci::spec(CiState::Unknown, params, None)?;
 	let token = state
 		.github_token
 		.as_deref()

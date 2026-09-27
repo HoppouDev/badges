@@ -1,6 +1,7 @@
-//! Cozy badge layout, mirroring Devin's Badges Figma auto-layout
+//! Badge layout for Devin's Badges' cozy and compact styles, mirroring their
+//! Figma auto-layout
 //!
-//! All geometry lives in [`geometry`]; the template only receives computed
+//! All geometry lives in [`Geometry`]; the template only receives computed
 //! values
 
 use askama::Template;
@@ -11,38 +12,128 @@ use crate::icon::{Icon, IconError};
 use crate::svg::{num, round3};
 use crate::text::{self, Line, UnsupportedChar, Weight};
 
-/// Measured from the exported `cozy` SVGs
-pub mod geometry {
-	pub const HEIGHT: f64 = 56.0;
-	pub const CORNER_RADIUS: f64 = 8.0;
-	/// White inner border, stroked on a rect inset by half its width
-	pub const BORDER_WIDTH: f64 = 2.1;
-	/// Horizontal padding on both sides
-	pub const PADDING: f64 = 12.0;
-	pub const ICON_SIZE: f64 = 40.0;
-	pub const ICON_Y: f64 = 8.0;
-	/// Space between icon and text
-	pub const ICON_GAP: f64 = 8.0;
-	/// Drop shadow blur (stdDeviation) behind the icon and the text
-	pub const ICON_SHADOW_BLUR: f64 = 20.0 / 7.0;
-	pub const TEXT_SHADOW_BLUR: f64 = 2.8;
-	/// Figma sizes a shadow's filter region to extend this many blurs past the
-	/// shape
-	pub const SHADOW_SPREAD: f64 = 2.0;
-	pub const TITLE_SIZE: f64 = 16.0;
-	pub const LABEL_SIZE: f64 = 17.0;
-	pub const TITLE_BASELINE: f64 = 24.5;
-	pub const LABEL_BASELINE: f64 = 43.5;
-	pub const LABEL_BASELINE_SINGLE: f64 = 34.0;
-	/// Figma text frame (top, height) for two-line and single-line badges
-	pub const TEXT_BOX_TWO_LINE: (f64, f64) = (9.5, 37.0);
-	pub const TEXT_BOX_SINGLE: (f64, f64) = (19.0, 18.477);
-	/// Label gradient span around its baseline (cap height, overshoot)
-	pub const LABEL_GRADIENT_ABOVE: f64 = 15.0;
-	pub const LABEL_GRADIENT_BELOW: f64 = 0.231;
+/// Figma sizes a shadow's filter region to extend this many blurs past the
+/// shape
+const SHADOW_SPREAD: f64 = 2.0;
+const LABEL_SIZE: f64 = 17.0;
+/// Label gradient span around its baseline (cap height, overshoot)
+const LABEL_GRADIENT_ABOVE: f64 = 15.0;
+const LABEL_GRADIENT_BELOW: f64 = 0.231;
+
+/// How the title and label are arranged
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TextLayout {
+	/// Title above the label; the text frame is as wide as the wider line
+	Stacked,
+	/// Title then label on one baseline, each in a whole-pixel frame,
+	/// separated by `gap`
+	Inline { gap: f64 },
 }
 
-use geometry::*;
+/// Style dimensions, measured from Devin's Badges exports
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Geometry {
+	pub height: f64,
+	pub corner_radius: f64,
+	/// White inner border, stroked on a rect inset by half its width
+	pub border_width: f64,
+	/// Horizontal padding on both sides, and the icon's x
+	pub padding: f64,
+	pub icon_size: f64,
+	pub icon_y: f64,
+	/// Space between icon and text
+	pub icon_gap: f64,
+	/// Drop shadow blur (stdDeviation) behind the icon and the text
+	pub icon_shadow_blur: f64,
+	pub text_shadow_blur: f64,
+	pub text_layout: TextLayout,
+	/// Title font size; the label is always [`LABEL_SIZE`]
+	pub title_size: f64,
+	pub title_baseline: f64,
+	pub label_baseline: f64,
+	pub label_baseline_single: f64,
+	/// Figma text frame (top, height) with and without a title
+	pub text_box: (f64, f64),
+	pub text_box_single: (f64, f64),
+}
+
+/// 56px tall, title stacked above the label
+pub const COZY: Geometry = Geometry {
+	height: 56.0,
+	corner_radius: 8.0,
+	border_width: 2.1,
+	padding: 12.0,
+	icon_size: 40.0,
+	icon_y: 8.0,
+	icon_gap: 8.0,
+	icon_shadow_blur: 20.0 / 7.0,
+	text_shadow_blur: 2.8,
+	text_layout: TextLayout::Stacked,
+	title_size: 16.0,
+	title_baseline: 24.5,
+	label_baseline: 43.5,
+	label_baseline_single: 34.0,
+	text_box: (9.5, 37.0),
+	text_box_single: (19.0, 18.477),
+};
+
+/// 40px tall, title and label on one line. Most compact exports use a 15/7
+/// border and swap the cozy shadow blurs; a few older ones (e.g. Sass) match
+/// cozy instead
+pub const COMPACT: Geometry = Geometry {
+	height: 40.0,
+	corner_radius: 8.0,
+	border_width: 15.0 / 7.0,
+	padding: 8.0,
+	icon_size: 28.0,
+	icon_y: 6.0,
+	icon_gap: 6.0,
+	icon_shadow_blur: 2.8,
+	text_shadow_blur: 20.0 / 7.0,
+	text_layout: TextLayout::Inline { gap: 4.0 },
+	title_size: 17.0,
+	title_baseline: 26.5,
+	label_baseline: 26.5,
+	label_baseline_single: 26.5,
+	text_box: (9.5, 21.0),
+	text_box_single: (9.5, 21.0),
+};
+
+/// Devin's Badges style
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum Style {
+	#[default]
+	Cozy,
+	Compact,
+}
+
+impl Style {
+	pub const NAMES: &[&str] = &["cozy", "compact"];
+
+	/// Parse a `style` parameter; unset or empty is cozy
+	pub fn parse(value: Option<&str>) -> Result<Self, BadgeError> {
+		match value.map(str::trim) {
+			None | Some("") => Ok(Self::Cozy),
+			Some(v) if v.eq_ignore_ascii_case("cozy") => Ok(Self::Cozy),
+			Some(v) if v.eq_ignore_ascii_case("compact") => Ok(Self::Compact),
+			Some(_) => Err(BadgeError::InvalidStyle),
+		}
+	}
+
+	pub fn name(self) -> &'static str {
+		match self {
+			Self::Cozy => "cozy",
+			Self::Compact => "compact",
+		}
+	}
+
+	pub fn geometry(self) -> &'static Geometry {
+		match self {
+			Self::Cozy => &COZY,
+			Self::Compact => &COMPACT,
+		}
+	}
+}
 
 pub const MAX_TEXT_CHARS: usize = 64;
 pub const DEFAULT_ACCENT: Rgb = Rgb(0xf1, 0xf1, 0xf1);
@@ -56,6 +147,8 @@ pub enum BadgeError {
 	TooLong(&'static str),
 	#[error("invalid {0}: expected a CSS colour such as cd6699")]
 	InvalidColor(&'static str),
+	#[error("invalid style: expected cozy or compact")]
+	InvalidStyle,
 	#[error("{field} contains a character the font does not support: {ch:?}")]
 	Unsupported { field: &'static str, ch: char },
 	#[error(transparent)]
@@ -64,7 +157,7 @@ pub enum BadgeError {
 	Render(#[from] askama::Error),
 }
 
-/// Colour overrides; anything unset falls back to the cozy defaults
+/// Colour overrides; anything unset falls back to the defaults
 #[derive(Debug, Default, Clone)]
 pub struct ColorOptions {
 	/// Label and icon colour
@@ -118,10 +211,11 @@ pub struct BadgeSpec {
 	pub label: String,
 	pub colors: ColorOptions,
 	pub icon: Option<Icon>,
+	pub style: Style,
 }
 
 impl BadgeSpec {
-	/// Trim and validate the text lines; an empty title means a single-line
+	/// Trim and validate the text lines; an empty title means a label-only
 	/// badge
 	pub fn new(title: Option<&str>, label: &str) -> Result<Self, BadgeError> {
 		let label = label.trim();
@@ -138,6 +232,7 @@ impl BadgeSpec {
 			label: label.into(),
 			colors: ColorOptions::default(),
 			icon: None,
+			style: Style::default(),
 		})
 	}
 }
@@ -149,11 +244,18 @@ fn check_len(s: &str, field: &'static str) -> Result<(), BadgeError> {
 	Ok(())
 }
 
+/// Figma sizes text frames in whole pixels; round to its precision first so
+/// 72.0000001 stays 72
+fn frame_width(advance: f64) -> f64 {
+	round3(advance).ceil()
+}
+
 struct Layout {
 	width: f64,
 	text_x: f64,
 	title: Option<Line>,
 	label: Line,
+	label_x: f64,
 	label_baseline: f64,
 	/// Text frame (top, height) and width
 	text_box: (f64, f64),
@@ -161,42 +263,51 @@ struct Layout {
 }
 
 fn layout(spec: &BadgeSpec) -> Result<Layout, BadgeError> {
+	let g = spec.style.geometry();
 	let text_x = if spec.icon.is_some() {
-		PADDING + ICON_SIZE + ICON_GAP
+		g.padding + g.icon_size + g.icon_gap
 	} else {
-		PADDING
+		g.padding
 	};
 	let (label_baseline, text_box) = if spec.title.is_some() {
-		(LABEL_BASELINE, TEXT_BOX_TWO_LINE)
+		(g.label_baseline, g.text_box)
 	} else {
-		(LABEL_BASELINE_SINGLE, TEXT_BOX_SINGLE)
+		(g.label_baseline_single, g.text_box_single)
 	};
 	let unsupported = |field| move |UnsupportedChar(ch)| BadgeError::Unsupported { field, ch };
 
 	let title = spec
 		.title
 		.as_deref()
-		.map(|t| text::outline(t, Weight::Medium, TITLE_SIZE, text_x, TITLE_BASELINE))
+		.map(|t| text::outline(t, Weight::Medium, g.title_size, text_x, g.title_baseline))
 		.transpose()
 		.map_err(unsupported("title"))?;
+	let title_frame = title.as_ref().map(|t| frame_width(t.width));
+	let label_x = match (g.text_layout, title_frame) {
+		(TextLayout::Inline { gap }, Some(frame)) => text_x + frame + gap,
+		_ => text_x,
+	};
 	let label = text::outline(
 		&spec.label,
 		Weight::ExtraBold,
 		LABEL_SIZE,
-		text_x,
+		label_x,
 		label_baseline,
 	)
 	.map_err(unsupported("label"))?;
 
-	let widest = title.as_ref().map_or(0.0, |t| t.width).max(label.width);
-	// Figma sizes the text frame in whole pixels; round to its precision
-	// first so 72.0000001 stays 72
-	let text_width = round3(widest).ceil();
+	let text_width = match g.text_layout {
+		TextLayout::Stacked => {
+			frame_width(title.as_ref().map_or(0.0, |t| t.width).max(label.width))
+		}
+		TextLayout::Inline { .. } => label_x - text_x + frame_width(label.width),
+	};
 	Ok(Layout {
-		width: text_x + text_width + PADDING,
+		width: text_x + text_width + g.padding,
 		text_x,
 		title,
 		label,
+		label_x,
 		label_baseline,
 		text_box,
 		text_width,
@@ -248,7 +359,7 @@ struct LabelGradient {
 
 #[derive(Template)]
 #[template(path = "badge.svg")]
-struct Cozy<'a> {
+struct BadgeSvg<'a> {
 	/// Per-badge id prefix so inlined badges don't share gradients or filters
 	uid: &'a str,
 	alt: &'a str,
@@ -269,13 +380,14 @@ struct Cozy<'a> {
 
 fn uid(spec: &BadgeSpec, palette: &Palette) -> String {
 	let mut h = DefaultHasher::new();
-	(&spec.title, &spec.label, &spec.icon, palette).hash(&mut h);
+	(&spec.title, &spec.label, &spec.icon, spec.style, palette).hash(&mut h);
 	// ids must start with a letter
 	format!("b{:08x}", h.finish() as u32)
 }
 
-/// Render a cozy badge SVG
+/// Render a badge SVG in the spec's style
 pub fn render(spec: &BadgeSpec) -> Result<String, BadgeError> {
+	let g = spec.style.geometry();
 	let palette = spec.colors.resolve();
 	let layout = layout(spec)?;
 	let uid = uid(spec, &palette);
@@ -284,41 +396,47 @@ pub fn render(spec: &BadgeSpec) -> Result<String, BadgeError> {
 		None => spec.label.clone(),
 	};
 	let label_gradient = palette.label_to.map(|to| LabelGradient {
-		x: num(layout.text_x + layout.label.width / 2.0),
+		x: num(layout.label_x + layout.label.width / 2.0),
 		y1: num(layout.label_baseline - LABEL_GRADIENT_ABOVE),
 		y2: num(layout.label_baseline + LABEL_GRADIENT_BELOW),
 		to,
 	});
-	let border_inset = BORDER_WIDTH / 2.0;
+	let border_inset = g.border_width / 2.0;
 
-	let svg = Cozy {
+	let svg = BadgeSvg {
 		uid: &uid,
 		alt: &alt,
 		width: num(layout.width),
-		height: num(HEIGHT),
-		radius: num(CORNER_RADIUS),
+		height: num(g.height),
+		radius: num(g.corner_radius),
 		border: Border {
 			inset: num(border_inset),
-			width: num(layout.width - BORDER_WIDTH),
-			height: num(HEIGHT - BORDER_WIDTH),
-			stroke: num(BORDER_WIDTH),
-			radius: num(CORNER_RADIUS - border_inset),
+			width: num(layout.width - g.border_width),
+			height: num(g.height - g.border_width),
+			stroke: num(g.border_width),
+			radius: num(g.corner_radius - border_inset),
 		},
 		bg_gradient_x: num(layout.width / 2.0),
 		palette: &palette,
 		icon: spec.icon.as_ref(),
 		icon_box: IconBox {
-			x: num(PADDING),
-			y: num(ICON_Y),
-			size: num(ICON_SIZE),
+			x: num(g.padding),
+			y: num(g.icon_y),
+			size: num(g.icon_size),
 		},
-		icon_shadow: Shadow::around(PADDING, ICON_Y, ICON_SIZE, ICON_SIZE, ICON_SHADOW_BLUR),
+		icon_shadow: Shadow::around(
+			g.padding,
+			g.icon_y,
+			g.icon_size,
+			g.icon_size,
+			g.icon_shadow_blur,
+		),
 		text_shadow: Shadow::around(
 			layout.text_x,
 			layout.text_box.0,
 			layout.text_width,
 			layout.text_box.1,
-			TEXT_SHADOW_BLUR,
+			g.text_shadow_blur,
 		),
 		title_path: layout.title.as_ref().map(|l| l.path.as_str()),
 		label_path: &layout.label.path,
@@ -380,6 +498,7 @@ mod tests {
 			("Requires", "Architectury API", "213"),
 			("Built on", "Additive", "143"),
 			("Read the", "Changelog", "164"),
+			("Available on", "Bukkit", "164"),
 		] {
 			let mut s = spec(title, label);
 			s.icon = Some(square());
@@ -388,6 +507,123 @@ mod tests {
 		let mut single = BadgeSpec::new(None, "Buy Us a Coffee").unwrap();
 		single.icon = Some(square());
 		assert_eq!(width(&render(&single).unwrap()), "205");
+	}
+
+	#[test]
+	fn compact_widths_match_devins_badges() {
+		for (title, label, expected) in [
+			("Built with", "Sass", "171"),
+			("Available on", "GitHub", "212"),
+			("Chat with us on", "Discord", "247"),
+			("Translate on", "Crowdin", "226"),
+			("Requires", "Architectury API", "266"),
+			("Built on", "Additive", "186"),
+			("Read the", "Changelog", "219"),
+			// The Bukkit export reads "Available on", despite its folder name
+			("Available on", "Bukkit", "206"),
+		] {
+			let mut s = spec(title, label);
+			s.icon = Some(square());
+			s.style = Style::Compact;
+			assert_eq!(width(&render(&s).unwrap()), expected, "{title} {label}");
+		}
+		let mut single = BadgeSpec::new(None, "Buy Us a Coffee").unwrap();
+		single.icon = Some(square());
+		single.style = Style::Compact;
+		assert_eq!(width(&render(&single).unwrap()), "183");
+	}
+
+	#[test]
+	fn compact_frame_matches_github_reference() {
+		const REFERENCE: &str = include_str!("../tests/fixtures/github_compact_reference.svg");
+		let mut s = spec("Available on", "GitHub");
+		s.icon = Some(square());
+		s.style = Style::Compact;
+		s.colors = ColorOptions {
+			accent: Rgb::parse("fff"),
+			bg_top: Rgb::parse("181f29"),
+			bg_bottom: Rgb::parse("0f131a"),
+			..Default::default()
+		};
+		let svg = render(&s).unwrap();
+		let (ours, theirs) = (
+			Document::parse(&svg).unwrap(),
+			Document::parse(REFERENCE).unwrap(),
+		);
+		// Figma drops leading zeros and exports float noise (40.001, 39.202),
+		// so compare numerically with a small tolerance
+		let nums = |n: Node, names: &[&str]| -> Vec<f64> {
+			attrs(n, names).iter().map(|v| v.parse().unwrap()).collect()
+		};
+		let close = |a: Vec<f64>, b: Vec<f64>, what: &str| {
+			assert_eq!(a.len(), b.len());
+			for (x, y) in a.iter().zip(&b) {
+				assert!((x - y).abs() <= 0.003, "{what}: {a:?} vs {b:?}");
+			}
+		};
+		let root = ["width", "height"];
+		close(
+			nums(ours.root_element(), &root),
+			nums(theirs.root_element(), &root),
+			"root",
+		);
+		let border = |d: &Document| {
+			let r = d
+				.descendants()
+				.find(|n| n.has_tag_name("rect") && n.attribute("stroke").is_some())
+				.unwrap();
+			nums(r, &["width", "height", "x", "y", "rx", "stroke-width"])
+		};
+		close(border(&ours), border(&theirs), "border");
+		// Reference ids: c = icon shadow, d = text shadow, b = background
+		let filter = ["width", "height", "x", "y"];
+		let blur = |n: Node| -> Vec<f64> {
+			let b = n
+				.children()
+				.find(|c| c.has_tag_name("feGaussianBlur"))
+				.unwrap();
+			vec![b.attribute("stdDeviation").unwrap().parse().unwrap()]
+		};
+		for (mine, reference) in [("icon-shadow", "c"), ("text-shadow", "d")] {
+			let (m, r) = (by_id(&ours, mine), by_id(&theirs, reference));
+			close(nums(m, &filter), nums(r, &filter), mine);
+			close(blur(m), blur(r), mine);
+		}
+		let grad = ["x1", "x2", "y1"];
+		close(
+			nums(by_id(&ours, "bg"), &grad),
+			nums(by_id(&theirs, "b"), &grad),
+			"bg",
+		);
+	}
+
+	#[test]
+	fn style_parsing() {
+		assert_eq!(Style::parse(None).unwrap(), Style::Cozy);
+		assert_eq!(Style::parse(Some(" ")).unwrap(), Style::Cozy);
+		assert_eq!(Style::parse(Some("COMPACT")).unwrap(), Style::Compact);
+		assert!(matches!(
+			Style::parse(Some("wide")),
+			Err(BadgeError::InvalidStyle)
+		));
+		for name in Style::NAMES {
+			assert_eq!(Style::parse(Some(name)).unwrap().name(), *name);
+		}
+		// Same text, different styles, never share ids
+		let mut a = spec("Built with", "Sass");
+		let cozy = render(&a).unwrap();
+		a.style = Style::Compact;
+		let compact = render(&a).unwrap();
+		let uid = |s: &str| {
+			s[s.find("url(#").unwrap() + 5..]
+				.split('-')
+				.next()
+				.unwrap()
+				.to_string()
+		};
+		assert_ne!(uid(&cozy), uid(&compact));
+		// 8 padding + 76 title + 4 gap + 41 label + 8 padding
+		assert_eq!(width(&compact), "137");
 	}
 
 	#[test]
@@ -518,7 +754,7 @@ mod tests {
 			["13.4", "29.677"]
 		);
 		let l = layout(&BadgeSpec::new(None, "Sass").unwrap()).unwrap();
-		assert_eq!(l.label_baseline, LABEL_BASELINE_SINGLE);
+		assert_eq!(l.label_baseline, COZY.label_baseline_single);
 	}
 
 	#[test]

@@ -9,7 +9,7 @@ pub mod github;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
-use crate::badge::{BadgeError, BadgeSpec};
+use crate::badge::{BadgeError, BadgeSpec, Style};
 use crate::color::Rgb;
 use crate::icon::{self, Icon};
 use github::{Conclusion, Run, RunStatus, Workflow};
@@ -30,6 +30,7 @@ pub const PARAMS: &[(&str, &str)] = &[
 		"branch to report (default: the repository's default branch)",
 	),
 	("event", "triggering event to report (default push)"),
+	("style", "cozy (default) or compact"),
 ];
 
 /// GitHub's own status colours (Primer dark theme)
@@ -59,6 +60,8 @@ pub enum CiError {
 	InvalidBranch,
 	#[error("invalid event")]
 	InvalidEvent,
+	#[error("invalid style: expected cozy or compact")]
+	InvalidStyle,
 	#[error("GitHub integration is not configured")]
 	NotConfigured,
 	#[error("repository or workflow not found")]
@@ -87,6 +90,7 @@ pub struct CiParams {
 	pub title: Option<String>,
 	pub branch: Option<String>,
 	pub event: Option<String>,
+	pub style: Option<String>,
 }
 
 impl CiParams {
@@ -169,15 +173,17 @@ impl CiState {
 	}
 }
 
-/// Badge for a workflow state; `title` defaults to [`DEFAULT_TITLE`]
+/// Badge for a workflow state; the title defaults to [`DEFAULT_TITLE`]
 pub fn spec(
 	state: CiState,
-	title: Option<&str>,
+	params: &CiParams,
 	icon: Option<Icon>,
 ) -> Result<BadgeSpec, BadgeError> {
-	let mut spec = BadgeSpec::new(Some(title.unwrap_or(DEFAULT_TITLE)), state.label())?;
+	let title = params.title.as_deref().unwrap_or(DEFAULT_TITLE);
+	let mut spec = BadgeSpec::new(Some(title), state.label())?;
 	spec.colors.accent = Some(state.color());
 	spec.icon = icon;
+	spec.style = Style::parse(params.style.as_deref())?;
 	Ok(spec)
 }
 
@@ -201,6 +207,11 @@ pub fn cache_key(
 		query.append_pair("branch", branch);
 	}
 	query.append_pair("event", params.event()?);
+	// Only non-default styles appear, so style=cozy shares the default key
+	let style = Style::parse(params.style.as_deref()).map_err(|_| CiError::InvalidStyle)?;
+	if style != Style::Cozy {
+		query.append_pair("style", style.name());
+	}
 	if let Some(title) = &params.title {
 		query.append_pair("title", title);
 	}
@@ -225,6 +236,7 @@ mod tests {
 			title: title.map(Into::into),
 			branch: branch.map(Into::into),
 			event: event.map(Into::into),
+			style: None,
 		}
 	}
 
@@ -272,19 +284,43 @@ mod tests {
 
 	#[test]
 	fn badge_spec() {
-		let s = spec(CiState::Passing, None, None).unwrap();
+		let s = spec(CiState::Passing, &CiParams::default(), None).unwrap();
 		assert_eq!(
 			(s.title.as_deref(), s.label.as_str()),
 			(Some(DEFAULT_TITLE), "Passing")
 		);
 		assert_eq!(s.colors.accent, Some(PASSING_GREEN));
-		let s = spec(CiState::Running, Some("Build"), None).unwrap();
+		let s = spec(CiState::Running, &params(Some("Build"), None, None), None).unwrap();
 		assert_eq!(
 			(s.title.as_deref(), s.label.as_str()),
 			(Some("Build"), "Running")
 		);
-		assert_eq!(spec(CiState::Unknown, Some(""), None).unwrap().title, None);
-		assert!(spec(CiState::Unknown, Some(&"t".repeat(65)), None).is_err());
+		let empty = params(Some(""), None, None);
+		assert_eq!(spec(CiState::Unknown, &empty, None).unwrap().title, None);
+		let long = params(Some(&"t".repeat(65)), None, None);
+		assert!(spec(CiState::Unknown, &long, None).is_err());
+		assert_eq!(
+			spec(CiState::Passing, &CiParams::default(), None)
+				.unwrap()
+				.style,
+			Style::Cozy
+		);
+		let compact = CiParams {
+			style: Some("Compact".into()),
+			..CiParams::default()
+		};
+		assert_eq!(
+			spec(CiState::Passing, &compact, None).unwrap().style,
+			Style::Compact
+		);
+		let bad = CiParams {
+			style: Some("wide".into()),
+			..CiParams::default()
+		};
+		assert!(matches!(
+			spec(CiState::Passing, &bad, None),
+			Err(BadgeError::InvalidStyle)
+		));
 	}
 
 	#[test]
@@ -315,6 +351,17 @@ mod tests {
 			key("o", &params(None, Some("a b"), None)),
 			Err(CiError::InvalidBranch)
 		);
+		let styled = |s: &str| CiParams {
+			style: Some(s.into()),
+			..CiParams::default()
+		};
+		assert_eq!(key("o", &styled("cozy")), key("o", &CiParams::default()));
+		assert_eq!(
+			key("o", &styled("COMPACT")),
+			Ok("https://b.dev/ci/o/badges/rust.yml?event=push&style=compact".into())
+		);
+		// Rejected rather than dropped, so a bad style can't poison the default key
+		assert_eq!(key("o", &styled("wide")), Err(CiError::InvalidStyle));
 	}
 
 	#[test]

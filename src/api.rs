@@ -9,7 +9,9 @@ use serde::Deserialize;
 use std::fmt::Write;
 use std::time::Duration;
 
-use crate::badge::{render, BadgeError, BadgeSpec, ColorOptions, DEFAULT_ACCENT, DEFAULT_TITLE};
+use crate::badge::{
+	render, BadgeError, BadgeSpec, ColorOptions, Style, DEFAULT_ACCENT, DEFAULT_TITLE,
+};
 use crate::ci::{self, CiError, CiParams, CiState};
 use crate::color::Rgb;
 use crate::icon::{Icon, IconError, IconSource};
@@ -31,6 +33,7 @@ pub const PARAMS: &[(&str, &str)] = &[
 		"Simple Icons slug, or an https png/jpeg/gif/webp url on an allowed host",
 	),
 	("iconColor", "Simple Icons fill (defaults to color)"),
+	("style", "cozy (default) or compact"),
 ];
 
 /// Routes served by `/badge`
@@ -82,6 +85,7 @@ pub struct Params {
 	pub bg2: Option<String>,
 	pub icon: Option<String>,
 	pub icon_color: Option<String>,
+	pub style: Option<String>,
 }
 
 impl Params {
@@ -107,6 +111,7 @@ impl Params {
 			bg_bottom: parse_color_param(self.bg2.as_deref(), "bg2")?,
 		};
 		spec.icon = icon;
+		spec.style = Style::parse(self.style.as_deref())?;
 		Ok(spec)
 	}
 }
@@ -158,9 +163,9 @@ pub fn respond(params: Params, icon: Option<Icon>) -> Response {
 }
 
 /// Render a workflow status badge
-pub fn respond_ci(state: CiState, title: Option<&str>, icon: Option<Icon>) -> Response {
+pub fn respond_ci(state: CiState, params: &CiParams, icon: Option<Icon>) -> Response {
 	svg_response(
-		ci::spec(state, title, icon)
+		ci::spec(state, params, icon)
 			.and_then(|spec| render(&spec))
 			.map_err(ApiError::from),
 		CachePolicy::Ci,
@@ -242,6 +247,7 @@ impl HttpStatus for BadgeError {
 			Self::MissingLabel
 			| Self::TooLong(_)
 			| Self::InvalidColor(_)
+			| Self::InvalidStyle
 			| Self::Unsupported { .. } => StatusCode::BAD_REQUEST,
 			Self::Icon(e) => e.status(),
 			Self::Render(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -256,7 +262,8 @@ impl HttpStatus for CiError {
 			| Self::InvalidRepo
 			| Self::InvalidWorkflow
 			| Self::InvalidBranch
-			| Self::InvalidEvent => StatusCode::BAD_REQUEST,
+			| Self::InvalidEvent
+			| Self::InvalidStyle => StatusCode::BAD_REQUEST,
 			// The redirect target couldn't be followed; the URL needs the new name
 			Self::Moved => StatusCode::BAD_REQUEST,
 			// Also covers private repositories, so their existence isn't revealed
@@ -454,7 +461,7 @@ mod tests {
 	#[test]
 	fn ci_badges_for_every_state() {
 		for state in CiState::ALL {
-			let r = respond_ci(state, None, Some(ci::icon().clone()));
+			let r = respond_ci(state, &CiParams::default(), Some(ci::icon().clone()));
 			assert_eq!(r.status(), StatusCode::OK, "{state:?}");
 			assert_eq!(
 				header(&r, header::CACHE_CONTROL),
@@ -481,12 +488,16 @@ mod tests {
 			);
 		}
 
-		let r = respond_ci(CiState::Passing, Some(""), None);
+		let with_title = |t: &str| CiParams {
+			title: Some(t.into()),
+			..CiParams::default()
+		};
+		let r = respond_ci(CiState::Passing, &with_title(""), None);
 		let svg = block_on(body(r));
 		let doc = Document::parse(&svg).unwrap();
 		assert_eq!(doc.root_element().attribute("aria-label"), Some("Passing"));
 
-		let r = respond_ci(CiState::Passing, Some("<b>"), None);
+		let r = respond_ci(CiState::Passing, &with_title("<b>"), None);
 		let svg = block_on(body(r));
 		assert!(!svg.contains("<b>"));
 		let doc = Document::parse(&svg).unwrap();
