@@ -1,6 +1,7 @@
 name = "badges"
 main = "build/index.js"
 compatibility_date = "2026-09-26"
+workers_dev = false
 
 [build]
 command = "cargo install -q --locked \"worker-build@=0.8.7\" && worker-build --release --panic-unwind"
