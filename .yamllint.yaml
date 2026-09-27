@@ -1,0 +1,7 @@
+---
+extends: default
+
+rules:
+  # GitHub Actions uses the `on:` key
+  truthy:
+    check-keys: false
