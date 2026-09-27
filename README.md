@@ -25,6 +25,7 @@ GET /badge?title=Built%20with&label=Sass&color=cd6699&icon=sass
 | `title`   | Small top line                                                                                     |
 | `color`   | Accent colour for the label and icon                                                               |
 | `icon`    | [Simple Icons](https://simpleicons.org) slug, or an https PNG/JPEG/GIF/WebP URL on an allowed host |
+| `style`   | `cozy` (default, 56px, title above label) or `compact` (40px, one line)                            |
 
 Colours accept hex with or without `#`, `rgb()`, `hsl()` or CSS names.
 
@@ -34,7 +35,7 @@ Colours accept hex with or without `#`, `rgb()`, `hsl()` or CSS names.
 GET /ci/{owner}/{repo}/{workflow}?branch=main&title=CI
 ```
 
-Shows Passing, Failing, Running, Cancelled, Skipped or Unknown for the latest `push` run. Only public repositories are served.
+Shows Passing, Failing, Running, Cancelled, Skipped or Unknown for the latest `push` run, in either `style`. Only public repositories are served.
 
 ## Development
 
