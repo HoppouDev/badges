@@ -42,7 +42,8 @@
 	--sidebar-foreground: oklch(0.129 0.042 264.695);
 	--sidebar-primary: oklch(0.208 0.042 265.755);
 	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-accent: oklch(0.968 0.007 247.896);
+	/* Selected/hovered sidebar item: slate-200 stands out from the off-white sidebar */
+	--sidebar-accent: var(--color-slate-200);
 	--sidebar-accent-foreground: oklch(0.208 0.042 265.755);
 	--sidebar-border: oklch(0.929 0.013 255.508);
 	--sidebar-ring: oklch(0.704 0.04 256.788);
@@ -72,13 +73,16 @@
 	--chart-3: oklch(0.769 0.188 70.08);
 	--chart-4: oklch(0.627 0.265 303.9);
 	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar: oklch(0.208 0.042 265.755);
+	/* Same as the page; the divider alone separates them */
+	--sidebar: var(--background);
 	--sidebar-foreground: oklch(0.984 0.003 247.858);
 	--sidebar-primary: oklch(0.488 0.243 264.376);
 	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-accent: oklch(0.279 0.041 260.031);
+	/* Selected/hovered sidebar item: slate-900 is a quieter step up from the page */
+	--sidebar-accent: var(--color-slate-900);
 	--sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-border: oklch(1 0 0 / 10%);
+	/* A solid divider; the theme's translucent white read as a glow */
+	--sidebar-border: var(--color-slate-800);
 	--sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
