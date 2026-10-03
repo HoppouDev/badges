@@ -59,6 +59,8 @@ Format names are case-insensitive, and anything else returns `400`.
 
 ## Development
 
+The API is the `badges` crate in `backend/`, a member of the Cargo workspace at the repo root. Cargo commands run from the root; `wrangler` runs from `backend/`.
+
 ```sh
 # Test
 cargo test
@@ -66,13 +68,13 @@ cargo test
 # Render a badge locally (any format)
 cargo run --example render -- "title=Built with" label=Sass color=cd6699 format=png > sass.png
 
-# Preview the API locally put GITHUB_TOKEN=... and in .dev.vars for /ci
-npx wrangler dev
+# Preview the API locally; put GITHUB_TOKEN=... in backend/.dev.vars for /ci
+cd backend && npx wrangler dev
 ```
 
 ## Releasing
 
-Pushing a `v*` tag deploys the Worker and publishes a GitHub release with notes from [git-cliff](https://git-cliff.org). The tag must match the `Cargo.toml` version, so cut releases with [cargo-release](https://github.com/crate-ci/cargo-release) (`cargo binstall cargo-release`), configured in `release.toml`. It bumps `Cargo.toml` and `Cargo.lock`, commits, tags and pushes, and only dry-runs without `--execute`:
+Pushing a `v*` tag deploys the Worker and publishes a GitHub release with notes from [git-cliff](https://git-cliff.org). The tag must match the `backend/Cargo.toml` version, so cut releases with [cargo-release](https://github.com/crate-ci/cargo-release) (`cargo binstall cargo-release`), configured in `release.toml`. From the repo root, it bumps the version in `backend/Cargo.toml` and `Cargo.lock`, commits, tags and pushes, and only dry-runs without `--execute`:
 
 ```sh
 # Suggested bump from conventional commits since the last tag
@@ -81,9 +83,10 @@ git cliff --bumped-version
 cargo release minor --execute  # or patch, major, X.Y.Z
 ```
 
-The first release needs no level, tagging the current version: `cargo release --execute`. The workflow needs a `CLOUDFLARE_API_TOKEN` repository secret.
+The workflow needs a `CLOUDFLARE_API_TOKEN` repository secret.
 
 ```sh
+# From backend/
 # Required for /ci
 npx wrangler secret put GITHUB_TOKEN
 
@@ -91,10 +94,10 @@ npx wrangler secret put GITHUB_TOKEN
 npx wrangler deploy
 ```
 
-Never commit tokens: `.dev.vars` is ignored by git, and production uses the Worker secret.
+Never commit tokens: `backend/.dev.vars` is ignored by git, and production uses the Worker secret.
 
 ## License
 
 This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md).
 
-The bundled Inter fonts are licensed under the SIL Open Font License ([assets/fonts/LICENSE.txt](assets/fonts/LICENSE.txt)). Icons come from [Simple Icons](https://simpleicons.org) (CC0), and the badge design is based on [Devin's Badges](https://github.com/intergrav/devins-badges) (CC0).
+The bundled Inter fonts are licensed under the SIL Open Font License ([backend/assets/fonts/LICENSE.txt](backend/assets/fonts/LICENSE.txt)). Icons come from [Simple Icons](https://simpleicons.org) (CC0), and the badge design is based on [Devin's Badges](https://github.com/intergrav/devins-badges) (CC0).

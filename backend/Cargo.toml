@@ -1,0 +1,37 @@
+[package]
+name = "badges"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+askama = "0.16.1"
+axum = { version = "0.8", default-features = false, features = ["query"] }
+base64 = "0.22"
+csscolorparser = "0.8"
+gif = { version = "0.14", default-features = false, features = ["std"] }
+gix-validate = "0.12"
+headers = "0.4"
+image = { version = "0.25", default-features = false, features = ["avif", "jpeg", "png", "webp"] }
+infer = { version = "0.19", default-features = false }
+mime = "0.3"
+palette = { version = "0.7", default-features = false, features = ["std"] }
+resvg = { version = "0.48", default-features = false, features = ["raster-images"] }
+roxmltree = "0.21"
+rustybuzz = "0.20.1"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1"
+svgtypes = "0.16"
+thiserror = "2"
+url = "2"
+
+[dev-dependencies]
+serde_urlencoded = "0.7"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+futures-util = { version = "0.3", default-features = false }
+tower-service = "0.3.3"
+worker = { version = "0.8", features = ["axum", "http"] }
