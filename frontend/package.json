@@ -60,6 +60,8 @@
 		"typescript-eslint": "^8.60.1",
 		"unified": "^11.0.5",
 		"vaul-svelte": "1.0.0-next.7",
+		"vfile": "^6.0.3",
+		"vfile-matter": "^5.0.1",
 		"vite": "^8.3.0",
 		"vitest": "^4.1.8",
 		"vitest-browser-svelte": "^2.1.1",
