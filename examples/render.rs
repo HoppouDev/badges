@@ -3,10 +3,13 @@
 //! cargo run --example render -- "title=Built with" label=Sass color=cd6699 >
 //! sass.svg
 //!
-//! Accepts the same keys as the HTTP query string. Remote `icon` values are
-//! not fetched here; pass `iconPath=<24x24 path data>` to include an icon.
+//! Accepts the same keys as the HTTP query string, including `format`. Remote
+//! `icon` values are not fetched here; pass `iconPath=<24x24 path data>` to
+//! include an icon.
 
-use badges::{api::Params, render, Icon, PathData};
+use std::io::Write;
+
+use badges::{api::Params, raster, render, BadgeError, Icon, PathData};
 
 fn fail(msg: &str) -> ! {
 	eprintln!("{msg}");
@@ -31,8 +34,15 @@ fn main() {
 	if params.icon.is_some() {
 		fail("icon is fetched by the Worker; pass iconPath=<path data> instead");
 	}
-	match params.into_spec(icon).and_then(|spec| render(&spec)) {
-		Ok(svg) => print!("{svg}"),
+	let image = params.format().and_then(|format| {
+		let svg = params.into_spec(icon).and_then(|spec| render(&spec))?;
+		raster::encode(svg, format)
+	});
+	match image {
+		Ok(bytes) => std::io::stdout()
+			.write_all(&bytes)
+			.unwrap_or_else(|e| fail(&e.to_string())),
+		Err(BadgeError::Encode(detail)) => fail(&detail),
 		Err(e) => fail(&e.to_string()),
 	}
 }

@@ -12,7 +12,7 @@ A silly badges API, based on [Devin's Badges](https://github.com/intergrav/devin
 
 ## Usage
 
-Badges are SVGs served by a Cloudflare Worker at `https://badges.hoppou.dev`. The full parameter list is served at `/`.
+Badges are served by a Cloudflare Worker at `https://badges.hoppou.dev`, as SVG by default or rasterised with `format`. The full parameter list is served at `/`.
 
 ### Custom badge
 
@@ -27,6 +27,7 @@ GET /badge?title=Built%20with&label=Sass&color=cd6699&icon=sass
 | `color`   | Accent colour for the label and icon                                                               |
 | `icon`    | [Simple Icons](https://simpleicons.org) slug, or an https PNG/JPEG/GIF/WebP URL on an allowed host |
 | `style`   | `cozy` (default, 56px, title above label) or `compact` (40px, one line)                            |
+| `format`  | `svg` (default), `png`, `avif`, `webp` (lossless) or `jpeg` (transparent corners become white)     |
 
 Colours accept hex with or without `#`, `rgb()`, `hsl()` or CSS names.
 
@@ -36,7 +37,7 @@ Colours accept hex with or without `#`, `rgb()`, `hsl()` or CSS names.
 GET /ci/{owner}/{repo}/{workflow}?branch=main&title=CI
 ```
 
-Shows Passing, Failing, Running, Cancelled, Skipped or Unknown for the latest `push` run, in either `style`. Only public repositories are served.
+Shows Passing, Failing, Running, Cancelled, Skipped or Unknown for the latest `push` run, in either `style` and any `format`. Only public repositories are served.
 
 ## Development
 

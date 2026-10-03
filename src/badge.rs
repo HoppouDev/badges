@@ -149,12 +149,17 @@ pub enum BadgeError {
 	InvalidColor(&'static str),
 	#[error("invalid style: expected cozy or compact")]
 	InvalidStyle,
+	#[error("invalid format: expected svg, png, avif, webp or jpeg")]
+	InvalidFormat,
 	#[error("{field} contains a character the font does not support: {ch:?}")]
 	Unsupported { field: &'static str, ch: char },
 	#[error(transparent)]
 	Icon(#[from] IconError),
 	#[error("failed to render badge")]
 	Render(#[from] askama::Error),
+	/// Detail is for logs only and never shown to clients
+	#[error("failed to encode badge")]
+	Encode(String),
 }
 
 /// Colour overrides; anything unset falls back to the defaults

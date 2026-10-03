@@ -9,6 +9,7 @@ pub mod ci;
 pub mod color;
 mod fetch_error;
 pub mod icon;
+pub mod raster;
 mod svg;
 mod text;
 

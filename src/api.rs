@@ -15,6 +15,7 @@ use crate::badge::{
 use crate::ci::{self, CiError, CiParams, CiState};
 use crate::color::Rgb;
 use crate::icon::{Icon, IconError, IconSource};
+use crate::raster::{self, Format};
 
 /// Query parameters and their meaning; the single source for the help text
 pub const PARAMS: &[(&str, &str)] = &[
@@ -34,12 +35,16 @@ pub const PARAMS: &[(&str, &str)] = &[
 	),
 	("iconColor", "Simple Icons fill (defaults to color)"),
 	("style", "cozy (default) or compact"),
+	(
+		"format",
+		"svg (default), png, avif, webp or jpeg (white corners)",
+	),
 ];
 
 /// Routes served by `/badge`
 const BADGE_ROUTES: &[&str] = &["/badge", "/badge.svg"];
 /// Badges only need inline data: images; everything else is blocked
-const SVG_CSP: &str = "default-src 'none'; img-src data:; style-src 'unsafe-inline'";
+const CSP: &str = "default-src 'none'; img-src data:; style-src 'unsafe-inline'";
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum CachePolicy {
@@ -86,6 +91,7 @@ pub struct Params {
 	pub icon: Option<String>,
 	pub icon_color: Option<String>,
 	pub style: Option<String>,
+	pub format: Option<String>,
 }
 
 impl Params {
@@ -97,6 +103,10 @@ impl Params {
 			}
 			_ => Ok(None),
 		}
+	}
+
+	pub fn format(&self) -> Result<Format, BadgeError> {
+		Format::parse(self.format.as_deref())
 	}
 
 	/// Validate into a renderable spec
@@ -151,38 +161,33 @@ pub fn help() -> String {
 	s
 }
 
-/// Render `params` into an SVG or error response
+/// Render `params` into an image or error response
 pub fn respond(params: Params, icon: Option<Icon>) -> Response {
-	svg_response(
-		params
-			.into_spec(icon)
-			.and_then(|spec| render(&spec))
-			.map_err(ApiError::from),
-		CachePolicy::Badge,
-	)
+	let body = params.format().and_then(|format| {
+		let svg = params.into_spec(icon).and_then(|spec| render(&spec))?;
+		Ok((format, raster::encode(svg, format)?))
+	});
+	image_response(body.map_err(ApiError::from), CachePolicy::Badge)
 }
 
 /// Render a workflow status badge
 pub fn respond_ci(state: CiState, params: &CiParams, icon: Option<Icon>) -> Response {
-	svg_response(
-		ci::spec(state, params, icon)
-			.and_then(|spec| render(&spec))
-			.map_err(ApiError::from),
-		CachePolicy::Ci,
-	)
+	let body = params.format().map_err(ApiError::from).and_then(|format| {
+		let svg = ci::spec(state, params, icon).and_then(|spec| render(&spec))?;
+		Ok((format, raster::encode(svg, format)?))
+	});
+	image_response(body, CachePolicy::Ci)
 }
 
-fn svg_response(svg: Result<String, ApiError>, policy: CachePolicy) -> Response {
-	let svg = match svg {
-		Ok(svg) => svg,
+fn image_response(body: Result<(Format, Vec<u8>), ApiError>, policy: CachePolicy) -> Response {
+	let (format, body) = match body {
+		Ok(body) => body,
 		Err(e) => return e.into_response(),
 	};
 	let mut headers = HeaderMap::new();
 	headers.insert(
 		header::CONTENT_TYPE,
-		"image/svg+xml; charset=utf-8"
-			.parse()
-			.expect("valid header"),
+		format.content_type().parse().expect("valid header"),
 	);
 	headers.insert(
 		header::X_CONTENT_TYPE_OPTIONS,
@@ -190,10 +195,10 @@ fn svg_response(svg: Result<String, ApiError>, policy: CachePolicy) -> Response 
 	);
 	headers.insert(
 		header::CONTENT_SECURITY_POLICY,
-		SVG_CSP.parse().expect("valid header"),
+		CSP.parse().expect("valid header"),
 	);
 	headers.typed_insert(policy.header());
-	(headers, svg).into_response()
+	(headers, body).into_response()
 }
 
 /// Edge cache key for a request, or `None` when it must not be cached
@@ -248,9 +253,10 @@ impl HttpStatus for BadgeError {
 			| Self::TooLong(_)
 			| Self::InvalidColor(_)
 			| Self::InvalidStyle
+			| Self::InvalidFormat
 			| Self::Unsupported { .. } => StatusCode::BAD_REQUEST,
 			Self::Icon(e) => e.status(),
-			Self::Render(_) => StatusCode::INTERNAL_SERVER_ERROR,
+			Self::Render(_) | Self::Encode(_) => StatusCode::INTERNAL_SERVER_ERROR,
 		}
 	}
 }
@@ -263,7 +269,8 @@ impl HttpStatus for CiError {
 			| Self::InvalidWorkflow
 			| Self::InvalidBranch
 			| Self::InvalidEvent
-			| Self::InvalidStyle => StatusCode::BAD_REQUEST,
+			| Self::InvalidStyle
+			| Self::InvalidFormat => StatusCode::BAD_REQUEST,
 			// The redirect target couldn't be followed; the URL needs the new name
 			Self::Moved => StatusCode::BAD_REQUEST,
 			// Also covers private repositories, so their existence isn't revealed
@@ -302,6 +309,7 @@ impl ApiError {
 	pub fn log_detail(&self) -> Option<&str> {
 		match self {
 			Self::Badge(BadgeError::Icon(IconError::Upstream(d)))
+			| Self::Badge(BadgeError::Encode(d))
 			| Self::Ci(CiError::Upstream(d)) => Some(d),
 			_ => None,
 		}
@@ -399,12 +407,28 @@ mod tests {
 			"image/svg+xml; charset=utf-8"
 		);
 		assert_eq!(header(&r, header::X_CONTENT_TYPE_OPTIONS), "nosniff");
-		assert_eq!(header(&r, header::CONTENT_SECURITY_POLICY), SVG_CSP);
+		assert_eq!(header(&r, header::CONTENT_SECURITY_POLICY), CSP);
 		assert_eq!(
 			header(&r, header::CACHE_CONTROL),
 			cache_control(CachePolicy::Badge)
 		);
 		assert!(block_on(body(r)).contains("fill=\"#ff0000\""));
+	}
+
+	#[test]
+	fn renders_raster_formats_with_their_content_type() {
+		let r = respond(params("label=Sass&format=WebP"), None);
+		assert_eq!(r.status(), StatusCode::OK);
+		assert_eq!(header(&r, header::CONTENT_TYPE), "image/webp");
+		let bytes = block_on(axum::body::to_bytes(r.into_body(), usize::MAX)).unwrap();
+		assert_eq!(&bytes[..4], b"RIFF");
+
+		let ci = CiParams {
+			format: Some("png".into()),
+			..CiParams::default()
+		};
+		let r = respond_ci(CiState::Passing, &ci, Some(ci::icon().clone()));
+		assert_eq!(header(&r, header::CONTENT_TYPE), "image/png");
 	}
 
 	#[test]
@@ -422,6 +446,13 @@ mod tests {
 		assert_eq!(
 			block_on(body(r)),
 			"invalid color2: expected a CSS colour such as cd6699"
+		);
+
+		let r = respond(params("label=x&format=gif"), None);
+		assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+		assert_eq!(
+			block_on(body(r)),
+			"invalid format: expected svg, png, avif, webp or jpeg"
 		);
 
 		let hosts = ["raw.githubusercontent.com".to_string()];
@@ -467,7 +498,7 @@ mod tests {
 				header(&r, header::CACHE_CONTROL),
 				cache_control(CachePolicy::Ci)
 			);
-			assert_eq!(header(&r, header::CONTENT_SECURITY_POLICY), SVG_CSP);
+			assert_eq!(header(&r, header::CONTENT_SECURITY_POLICY), CSP);
 			let svg = block_on(body(r));
 			let doc = Document::parse(&svg).unwrap();
 			let root = doc.root_element();

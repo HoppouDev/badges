@@ -12,6 +12,7 @@ use std::sync::OnceLock;
 use crate::badge::{BadgeError, BadgeSpec, Style};
 use crate::color::Rgb;
 use crate::icon::{self, Icon};
+use crate::raster::Format;
 use github::{Conclusion, Run, RunStatus, Workflow};
 
 pub const ROUTE: &str = "/ci/{owner}/{repo}/{workflow}";
@@ -31,6 +32,7 @@ pub const PARAMS: &[(&str, &str)] = &[
 	),
 	("event", "triggering event to report (default push)"),
 	("style", "cozy (default) or compact"),
+	("format", "svg (default), png, avif, webp or jpeg"),
 ];
 
 /// GitHub's own status colours (Primer dark theme)
@@ -62,6 +64,8 @@ pub enum CiError {
 	InvalidEvent,
 	#[error("invalid style: expected cozy or compact")]
 	InvalidStyle,
+	#[error("invalid format: expected svg, png, avif, webp or jpeg")]
+	InvalidFormat,
 	#[error("GitHub integration is not configured")]
 	NotConfigured,
 	#[error("repository or workflow not found")]
@@ -91,6 +95,7 @@ pub struct CiParams {
 	pub branch: Option<String>,
 	pub event: Option<String>,
 	pub style: Option<String>,
+	pub format: Option<String>,
 }
 
 impl CiParams {
@@ -109,6 +114,10 @@ impl CiParams {
 			Some(e) if github::valid_event(e) => Ok(e),
 			Some(_) => Err(CiError::InvalidEvent),
 		}
+	}
+
+	pub fn format(&self) -> Result<Format, CiError> {
+		Format::parse(self.format.as_deref()).map_err(|_| CiError::InvalidFormat)
 	}
 }
 
@@ -212,6 +221,10 @@ pub fn cache_key(
 	if style != Style::Cozy {
 		query.append_pair("style", style.name());
 	}
+	let format = params.format()?;
+	if format != Format::Svg {
+		query.append_pair("format", format.name());
+	}
 	if let Some(title) = &params.title {
 		query.append_pair("title", title);
 	}
@@ -237,6 +250,7 @@ mod tests {
 			branch: branch.map(Into::into),
 			event: event.map(Into::into),
 			style: None,
+			format: None,
 		}
 	}
 
@@ -362,6 +376,16 @@ mod tests {
 		);
 		// Rejected rather than dropped, so a bad style can't poison the default key
 		assert_eq!(key("o", &styled("wide")), Err(CiError::InvalidStyle));
+		let formatted = |f: &str| CiParams {
+			format: Some(f.into()),
+			..CiParams::default()
+		};
+		assert_eq!(key("o", &formatted("svg")), key("o", &CiParams::default()));
+		assert_eq!(
+			key("o", &formatted("AVIF")),
+			Ok("https://b.dev/ci/o/badges/rust.yml?event=push&format=avif".into())
+		);
+		assert_eq!(key("o", &formatted("bmp")), Err(CiError::InvalidFormat));
 	}
 
 	#[test]

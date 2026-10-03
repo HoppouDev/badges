@@ -151,6 +151,7 @@ async fn ci_state(
 ) -> Result<CiState, ApiError> {
 	let workflow = Workflow::new(owner, repo, workflow_file)?;
 	let (branch, event) = (params.branch()?, params.event()?);
+	params.format()?;
 	ci::spec(CiState::Unknown, params, None)?;
 	let token = state
 		.github_token
