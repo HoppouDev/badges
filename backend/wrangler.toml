@@ -2,6 +2,10 @@ name = "badges"
 main = "build/index.js"
 compatibility_date = "2026-09-26"
 workers_dev = false
+routes = [
+  { pattern = "badges.hoppou.dev/badge*", zone_name = "hoppou.dev" },
+  { pattern = "badges.hoppou.dev/ci/*", zone_name = "hoppou.dev" },
+]
 
 [build]
 command = "cargo install -q --locked \"worker-build@=0.8.7\" && worker-build --release --panic-unwind"

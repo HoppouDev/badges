@@ -1,6 +1,7 @@
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "badges-docs",
+	"routes": [{ "pattern": "badges.hoppou.dev", "custom_domain": true }],
 	"compatibility_date": "2026-10-03",
 	"compatibility_flags": ["nodejs_als"],
 	"main": ".svelte-kit/cloudflare/_worker.js",
