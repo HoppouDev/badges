@@ -103,6 +103,10 @@ fn error_response(e: ApiError) -> Response {
 
 #[worker::send]
 async fn badge(State(state): State<AppState>, Query(params): Query<Params>) -> Response {
+	// Reject a bad format before spending an icon fetch on it
+	if let Err(e) = params.format() {
+		return error_response(e.into());
+	}
 	let icon = match params.icon_source(&state.icon_hosts) {
 		Ok(Some(source)) => match fetch::resolve(source).await {
 			Ok(icon) => Some(icon),

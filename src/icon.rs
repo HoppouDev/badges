@@ -6,6 +6,10 @@ use url::{Host, Url};
 
 /// Remote icons render at 40px, so 64 KiB is plenty
 pub const MAX_ICON_BYTES: usize = 64 * 1024;
+/// Longest accepted icon side in pixels. Raster output decodes icons at full
+/// size (4 bytes a pixel) before scaling them down, and 64 KiB of compressed
+/// data can declare far more pixels than a Worker has memory
+pub const MAX_ICON_SIDE: u32 = 2048;
 
 /// Longest accepted Simple Icons slug
 const MAX_SLUG_LEN: usize = 64;
@@ -35,6 +39,8 @@ pub enum IconError {
 	NotImage,
 	#[error("icon is larger than {max} KiB", max = MAX_ICON_BYTES / 1024)]
 	TooLarge,
+	#[error("icon is larger than {max}x{max} pixels", max = MAX_ICON_SIDE)]
+	TooManyPixels,
 	#[error("icon request timed out")]
 	Timeout,
 	/// Detail is for logs only and never shown to clients
@@ -106,6 +112,29 @@ impl ImageType {
 			"image/webp" => Some(Self::Webp),
 			_ => None,
 		}
+	}
+
+	/// Decoded size read from headers alone, as resvg would allocate it
+	fn dimensions(self, bytes: &[u8]) -> Option<(u32, u32)> {
+		let format = match self {
+			Self::Png => image::ImageFormat::Png,
+			Self::Jpeg => image::ImageFormat::Jpeg,
+			Self::Webp => image::ImageFormat::WebP,
+			Self::Gif => {
+				// resvg decodes the first frame at its own size, which may
+				// exceed the logical screen
+				let mut decoder = gif::DecodeOptions::new().read_info(bytes).ok()?;
+				let screen = (decoder.width(), decoder.height());
+				let frame = decoder.next_frame_info().ok()??;
+				return Some((
+					u32::from(screen.0.max(frame.width)),
+					u32::from(screen.1.max(frame.height)),
+				));
+			}
+		};
+		image::ImageReader::with_format(std::io::Cursor::new(bytes), format)
+			.into_dimensions()
+			.ok()
 	}
 }
 
@@ -196,26 +225,52 @@ pub fn simple_icon_from_svg(svg: &str) -> Option<Icon> {
 	PathData::new(path.attribute("d")?).map(Icon::Path)
 }
 
-/// Inline a remote image whose declared and sniffed types agree
+/// Inline a remote image whose declared and sniffed types agree and whose
+/// decoded size is bounded
 pub fn image_from_response(content_type: Option<&str>, bytes: &[u8]) -> Result<Icon, IconError> {
 	if bytes.len() > MAX_ICON_BYTES {
 		return Err(IconError::TooLarge);
 	}
 	let declared = content_type.and_then(ImageType::from_content_type);
-	match (declared, ImageType::sniff(bytes)) {
-		(Some(declared), Some(actual)) if declared == actual => {
-			Ok(Icon::Image(DataUri::new(actual, bytes)))
-		}
-		_ => Err(IconError::NotImage),
+	let kind = match (declared, ImageType::sniff(bytes)) {
+		(Some(declared), Some(actual)) if declared == actual => actual,
+		_ => return Err(IconError::NotImage),
+	};
+	let (width, height) = kind.dimensions(bytes).ok_or(IconError::NotImage)?;
+	if width.max(height) > MAX_ICON_SIDE {
+		return Err(IconError::TooManyPixels);
 	}
+	Ok(Icon::Image(DataUri::new(kind, bytes)))
+}
+
+/// Encode a blank PNG of the given size
+#[cfg(test)]
+pub(crate) fn test_png(width: u32, height: u32) -> Vec<u8> {
+	use image::ImageEncoder;
+	let pixels = vec![0; (width * height * 4) as usize];
+	let mut out = Vec::new();
+	image::codecs::png::PngEncoder::new(&mut out)
+		.write_image(&pixels, width, height, image::ExtendedColorType::Rgba8)
+		.unwrap();
+	out
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 
-	const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR";
-	const GIF: &[u8] = b"GIF89a\x01\0\x01\0";
+	/// GIF with a 1x1 screen and 2-colour palette whose first frame is
+	/// `width`x`height`
+	fn gif(width: u16, height: u16) -> Vec<u8> {
+		let mut b = b"GIF89a\x01\0\x01\0\x80\0\0".to_vec();
+		b.extend([0, 0, 0, 255, 255, 255]);
+		b.push(0x2c);
+		b.extend([0, 0, 0, 0]);
+		b.extend(width.to_le_bytes());
+		b.extend(height.to_le_bytes());
+		b.extend([0, 2, 2, 0x4c, 0x01, 0, 0x3b]);
+		b
+	}
 
 	fn hosts() -> Vec<String> {
 		DEFAULT_ICON_HOSTS.iter().map(|h| h.to_string()).collect()
@@ -299,7 +354,8 @@ mod tests {
 
 	#[test]
 	fn remote_images_must_be_allowed_rasters() {
-		let Ok(Icon::Image(uri)) = image_from_response(Some("Image/PNG; charset=binary"), PNG)
+		let png = test_png(1, 1);
+		let Ok(Icon::Image(uri)) = image_from_response(Some("Image/PNG; charset=binary"), &png)
 		else {
 			panic!("png rejected");
 		};
@@ -307,10 +363,10 @@ mod tests {
 			.to_string()
 			.starts_with("data:image/png;base64,iVBORw0KGgo"));
 		assert_eq!(
-			image_from_response(Some("image/png"), GIF),
+			image_from_response(Some("image/png"), &gif(1, 1)),
 			Err(IconError::NotImage)
 		);
-		assert_eq!(image_from_response(None, PNG), Err(IconError::NotImage));
+		assert_eq!(image_from_response(None, &png), Err(IconError::NotImage));
 		assert_eq!(
 			image_from_response(Some("image/svg+xml"), b"<svg/>"),
 			Err(IconError::NotImage)
@@ -319,10 +375,38 @@ mod tests {
 			image_from_response(Some("text/html"), b"<html>"),
 			Err(IconError::NotImage)
 		);
-		let big = [PNG, &vec![0; MAX_ICON_BYTES]].concat();
+		// Sniffs as PNG but has no readable header
+		assert_eq!(
+			image_from_response(Some("image/png"), b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR"),
+			Err(IconError::NotImage)
+		);
+		let big = [png.as_slice(), &vec![0; MAX_ICON_BYTES]].concat();
 		assert_eq!(
 			image_from_response(Some("image/png"), &big),
 			Err(IconError::TooLarge)
+		);
+	}
+
+	#[test]
+	fn decoded_size_is_bounded() {
+		let max = MAX_ICON_SIDE;
+		assert!(image_from_response(Some("image/png"), &test_png(max, 1)).is_ok());
+		// A few hundred bytes of PNG that would decode to 4 KiB rows
+		let wide = test_png(max + 1, 1);
+		assert!(wide.len() < MAX_ICON_BYTES);
+		assert_eq!(
+			image_from_response(Some("image/png"), &wide),
+			Err(IconError::TooManyPixels)
+		);
+		assert_eq!(
+			image_from_response(Some("image/png"), &test_png(1, max + 1)),
+			Err(IconError::TooManyPixels)
+		);
+		assert!(image_from_response(Some("image/gif"), &gif(16, 16)).is_ok());
+		// The screen is 1x1, but resvg would decode the frame at full size
+		assert_eq!(
+			image_from_response(Some("image/gif"), &gif(u16::MAX, u16::MAX)),
+			Err(IconError::TooManyPixels)
 		);
 	}
 }

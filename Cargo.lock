@@ -247,6 +247,7 @@ dependencies = [
  "base64",
  "csscolorparser",
  "futures-util",
+ "gif",
  "gix-validate",
  "headers",
  "image",

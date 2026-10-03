@@ -20,14 +20,14 @@ Badges are served by a Cloudflare Worker at `https://badges.hoppou.dev`, as SVG 
 GET /badge?title=Built%20with&label=Sass&color=cd6699&icon=sass
 ```
 
-| Parameter | Description                                                                                        |
-| --------- | -------------------------------------------------------------------------------------------------- |
-| `label`   | Bold bottom line (required)                                                                        |
-| `title`   | Small top line                                                                                     |
-| `color`   | Accent colour for the label and icon                                                               |
-| `icon`    | [Simple Icons](https://simpleicons.org) slug, or an https PNG/JPEG/GIF/WebP URL on an allowed host |
-| `style`   | `cozy` (default, 56px, title above label) or `compact` (40px, one line)                            |
-| `format`  | `svg` (default), `png`, `avif`, `webp` or `jpeg`; see [Image formats](#image-formats)              |
+| Parameter | Description                                                                                                                             |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`   | Bold bottom line (required)                                                                                                             |
+| `title`   | Small top line                                                                                                                          |
+| `color`   | Accent colour for the label and icon                                                                                                    |
+| `icon`    | [Simple Icons](https://simpleicons.org) slug, or an https PNG/JPEG/GIF/WebP URL on an allowed host (at most 64 KiB and 2048px per side) |
+| `style`   | `cozy` (default, 56px, title above label) or `compact` (40px, one line)                                                                 |
+| `format`  | `svg` (default), `png`, `avif`, `webp` or `jpeg`; see [Image formats](#image-formats)                                                   |
 
 Colours accept hex with or without `#`, `rgb()`, `hsl()` or CSS names.
 

@@ -818,8 +818,8 @@ mod tests {
 
 	#[test]
 	fn image_icons() {
-		let png = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR";
-		let icon = crate::icon::image_from_response(Some("image/png"), png).unwrap();
+		let png = crate::icon::test_png(1, 1);
+		let icon = crate::icon::image_from_response(Some("image/png"), &png).unwrap();
 		let Icon::Image(uri) = &icon else {
 			unreachable!()
 		};

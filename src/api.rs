@@ -238,7 +238,9 @@ impl HttpStatus for IconError {
 	fn status(&self) -> StatusCode {
 		match self {
 			Self::InvalidSpec | Self::NotHttps | Self::HostNotAllowed => StatusCode::BAD_REQUEST,
-			Self::Redirect | Self::NotImage | Self::TooLarge => StatusCode::BAD_REQUEST,
+			Self::Redirect | Self::NotImage | Self::TooLarge | Self::TooManyPixels => {
+				StatusCode::BAD_REQUEST
+			}
 			Self::NotFound => StatusCode::NOT_FOUND,
 			Self::Timeout => StatusCode::GATEWAY_TIMEOUT,
 			Self::Upstream(_) => StatusCode::BAD_GATEWAY,

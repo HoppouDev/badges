@@ -12,6 +12,7 @@ askama = "0.16.1"
 axum = { version = "0.8", default-features = false, features = ["query"] }
 base64 = "0.22"
 csscolorparser = "0.8"
+gif = { version = "0.14", default-features = false, features = ["std"] }
 gix-validate = "0.12"
 headers = "0.4"
 image = { version = "0.25", default-features = false, features = ["avif", "jpeg", "png", "webp"] }
