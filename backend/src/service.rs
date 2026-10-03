@@ -4,9 +4,12 @@ use axum::extract::{Path, Query, State};
 use axum::http::Uri;
 use axum::response::{IntoResponse, Response};
 use axum::{routing::get, Router};
+use std::borrow::Cow;
 use std::cell::OnceCell;
 use std::sync::Arc;
 use tower_service::Service;
+use worker::wasm_bindgen::JsCast;
+use worker::worker_sys::web_sys;
 use worker::{console_error, console_warn, event, Cache, Context, Env, HttpRequest};
 
 use crate::api::{self, ApiError, Params};
@@ -67,8 +70,20 @@ fn router(env: &Env) -> Router {
 	})
 }
 
+/// Convert to an `http` request, encoding characters `http::Uri` rejects so
+/// they reach the router instead of failing before it
+fn http_request(req: web_sys::Request) -> worker::Result<HttpRequest> {
+	let req = match api::normalize_url(&req.url()) {
+		Cow::Borrowed(_) => req,
+		// A Request is a valid RequestInit: method, headers and body carry over
+		Cow::Owned(url) => web_sys::Request::new_with_str_and_init(&url, req.unchecked_ref())?,
+	};
+	worker::request_from_wasm(req)
+}
+
 #[event(fetch)]
-async fn fetch(req: HttpRequest, env: Env, ctx: Context) -> worker::Result<worker::Response> {
+async fn fetch(req: web_sys::Request, env: Env, ctx: Context) -> worker::Result<worker::Response> {
+	let req = http_request(req)?;
 	let cache_key = api::cache_key(req.method(), req.uri());
 	let cache = Cache::default();
 	if let Some(key) = &cache_key {

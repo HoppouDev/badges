@@ -6,6 +6,7 @@ use axum::http::{header, HeaderMap, Method, StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
 use headers::{CacheControl, HeaderMapExt};
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::fmt::Write;
 use std::time::Duration;
 
@@ -226,6 +227,28 @@ pub fn cache_key(method: &Method, uri: &Uri) -> Option<String> {
 /// Whether a response may be written to the edge cache
 pub fn should_store(status: u16, cache_control: Option<&str>) -> bool {
 	status != 206 && !cache_control.is_some_and(|c| c.contains("no-store"))
+}
+
+/// Percent-encode bytes that `http::Uri` rejects
+///
+/// Cloudflare passes request URLs through as sent, so a client that doesn't
+/// encode a `"` (curl, scripts) would otherwise fail request conversion with a
+/// bare 500. Encoding matches what browsers send, so both share a cache key.
+/// Valid URLs are returned unchanged
+pub fn normalize_url(url: &str) -> Cow<'_, str> {
+	let allowed = |b: u8| b.is_ascii_alphanumeric() || b"-._~:/?#[]@!$&'()*+,;=%".contains(&b);
+	if url.bytes().all(allowed) {
+		return Cow::Borrowed(url);
+	}
+	let mut out = String::with_capacity(url.len() + 8);
+	for b in url.bytes() {
+		if allowed(b) {
+			out.push(b as char);
+		} else {
+			let _ = write!(out, "%{b:02X}");
+		}
+	}
+	Cow::Owned(out)
 }
 
 /// HTTP status for an error, defined next to the error mapping so new
@@ -574,6 +597,33 @@ mod tests {
 		let detail = ApiError::from(CiError::Upstream("why".into()));
 		assert_eq!(detail.log_detail(), Some("why"));
 		assert_eq!(ApiError::from(CiError::NotFound).log_detail(), None);
+	}
+
+	#[test]
+	fn raw_special_characters_become_parseable_urls() {
+		// Raw `"` failed http::Uri parsing and surfaced as a bare 500
+		let raw = "https://b.dev/badge?label=say \"hi\"&icon=rust\"";
+		assert!(raw.parse::<Uri>().is_err());
+		// Exactly what a browser sends, so both share a cache key
+		let fixed = normalize_url(raw);
+		assert_eq!(
+			fixed,
+			"https://b.dev/badge?label=say%20%22hi%22&icon=rust%22"
+		);
+		let uri: Uri = fixed.parse().unwrap();
+		assert_eq!(params(uri.query().unwrap()).label, "say \"hi\"");
+		let every_printable: String = (b' '..=b'~').map(char::from).collect();
+		assert!(
+			normalize_url(&format!("https://b.dev/badge?label={every_printable}"))
+				.parse::<Uri>()
+				.is_ok()
+		);
+		assert!(normalize_url("https://b.dev/badge?label=caf\u{e9}")
+			.parse::<Uri>()
+			.is_ok());
+		// Valid URLs, including existing escapes, are left alone
+		let valid = "https://b.dev/badge?label=a%20b&color=%23ff0000";
+		assert!(matches!(normalize_url(valid), Cow::Borrowed(v) if v == valid));
 	}
 
 	#[test]
