@@ -142,3 +142,28 @@
 		@apply font-sans;
 	}
 }
+
+/* Code blocks highlighted by rehype-pretty-code (Shiki). Both themes arrive as
+   inline --shiki-light/--shiki-dark variables; the .dark class picks one, so the
+   right colours apply before any script runs */
+[data-rehype-pretty-code-figure] pre {
+	background-color: var(--shiki-light-bg);
+}
+
+[data-rehype-pretty-code-figure] pre,
+[data-rehype-pretty-code-figure] pre span {
+	color: var(--shiki-light);
+	font-style: var(--shiki-light-font-style);
+	text-decoration: var(--shiki-light-text-decoration);
+}
+
+.dark [data-rehype-pretty-code-figure] pre {
+	background-color: var(--shiki-dark-bg);
+}
+
+.dark [data-rehype-pretty-code-figure] pre,
+.dark [data-rehype-pretty-code-figure] pre span {
+	color: var(--shiki-dark);
+	font-style: var(--shiki-dark-font-style);
+	text-decoration: var(--shiki-dark-text-decoration);
+}

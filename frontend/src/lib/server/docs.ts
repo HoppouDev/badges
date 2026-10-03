@@ -1,3 +1,4 @@
+import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
 import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
@@ -21,6 +22,9 @@ const processor = unified()
 	.use(remarkParse)
 	.use(remarkGfm)
 	.use(remarkRehype)
+	// Shiki colours for fenced code; both themes are inlined as CSS variables and
+	// layout.css picks one from the .dark class, so there is no flash on load
+	.use(rehypePrettyCode, { theme: { light: 'catppuccin-latte', dark: 'catppuccin-mocha' } })
 	.use(rehypeSlug)
 	.use(rehypeStringify);
 
