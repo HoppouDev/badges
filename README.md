@@ -6,7 +6,7 @@ A silly badges API, based on [Devin's Badges](https://github.com/intergrav/devin
 
 <a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=rust&style=cozy"></a>
 <a href="https://badges.hoppou.dev"><img alt="Deployed on Cloudflare" src="https://badges.hoppou.dev/badge?title=Deployed%20on&label=Cloudflare&color=f38020&icon=cloudflare&style=cozy"></a>
-<a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI Passing" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=cozy"></a>
+<a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI status" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=cozy"></a>
 
 </div>
 
@@ -98,6 +98,15 @@ cd backend && npx wrangler dev
 
 The frontend uses pnpm. Its docs are Markdown files in `frontend/src/docs/`, served under `/docs` (`index.md` is `/docs`, `foo.md` is `/docs/foo`), turned into HTML with [remark](https://github.com/remarkjs/remark) and [remark-rehype](https://github.com/remarkjs/remark-rehype) and prerendered at build time.
 
+Each doc starts with a frontmatter block. `title` is the page's heading, its browser title and its sidebar link, so docs don't write their own top-level heading; `section` is the sidebar group it sits under, and the optional `order` (default `0`, lowest first, ties sorted by title) positions it; sections follow the order of their first page. The build fails if `title` or `section` is missing, `order` is not a finite number, a doc has a top-level heading (`# Title`, or `Title` underlined with `===`), or two files map to the same URL (such as `foo.md` and `foo/index.md`). `/` redirects to `/docs`.
+
+```markdown
+---
+title: Overview
+section: Getting started
+---
+```
+
 ```sh
 cd frontend
 pnpm install
@@ -106,7 +115,7 @@ pnpm dev
 
 ## Releasing
 
-Pushing a `v*` tag deploys the API Worker and publishes a GitHub release with notes from [git-cliff](https://git-cliff.org). The tag must match the `backend/Cargo.toml` version, so cut releases with [cargo-release](https://github.com/crate-ci/cargo-release) (`cargo binstall cargo-release`), configured in `release.toml`. From the repo root, it bumps the version in `backend/Cargo.toml` and `Cargo.lock`, commits, tags and pushes, and only dry-runs without `--execute`:
+Pushing a `v*` tag deploys both Workers (the API from `backend/`, the frontend from `frontend/`) and, once both succeed, publishes a GitHub release with notes from [git-cliff](https://git-cliff.org). The tag must match the `backend/Cargo.toml` version, so cut releases with [cargo-release](https://github.com/crate-ci/cargo-release) (`cargo binstall cargo-release`), configured in `release.toml`. From the repo root, it bumps the version in `backend/Cargo.toml` and `Cargo.lock`, commits, tags and pushes, and only dry-runs without `--execute`:
 
 ```sh
 # Suggested bump from conventional commits since the last tag
@@ -126,7 +135,7 @@ npx wrangler secret put GITHUB_TOKEN
 npx wrangler deploy
 ```
 
-The frontend is not part of releases; deploy it by hand:
+To deploy the frontend outside a release:
 
 ```sh
 cd frontend
