@@ -96,7 +96,7 @@ cargo run --example render -- "title=Built with" label=Sass color=cd6699 format=
 cd backend && npx wrangler dev
 ```
 
-The frontend uses pnpm:
+The frontend uses pnpm. Its docs are Markdown files in `frontend/src/docs/`, served under `/docs` (`index.md` is `/docs`, `foo.md` is `/docs/foo`), turned into HTML with [remark](https://github.com/remarkjs/remark) and [remark-rehype](https://github.com/remarkjs/remark-rehype) and prerendered at build time.
 
 ```sh
 cd frontend
