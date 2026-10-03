@@ -27,7 +27,7 @@ GET /badge?title=Built%20with&label=Sass&color=cd6699&icon=sass
 | `color`   | Accent colour for the label and icon                                                               |
 | `icon`    | [Simple Icons](https://simpleicons.org) slug, or an https PNG/JPEG/GIF/WebP URL on an allowed host |
 | `style`   | `cozy` (default, 56px, title above label) or `compact` (40px, one line)                            |
-| `format`  | `svg` (default), `png`, `avif`, `webp` (lossless) or `jpeg` (transparent corners become white)     |
+| `format`  | `svg` (default), `png`, `avif`, `webp` or `jpeg`; see [Image formats](#image-formats)              |
 
 Colours accept hex with or without `#`, `rgb()`, `hsl()` or CSS names.
 
@@ -39,11 +39,32 @@ GET /ci/{owner}/{repo}/{workflow}?branch=main&title=CI
 
 Shows Passing, Failing, Running, Cancelled, Skipped or Unknown for the latest `push` run, in either `style` and any `format`. Only public repositories are served.
 
+### Image formats
+
+```http
+GET /badge?title=Built%20with&label=Rust&color=f74c00&icon=rust&format=png
+```
+
+SVG is the default and stays sharp at any size. The other formats are rasterised from the same SVG at its natural size (56px tall for `cozy`, 40px for `compact`), so they can look soft on high-DPI screens.
+
+| Format | Content type    | Notes                                                         |
+| ------ | --------------- | ------------------------------------------------------------- |
+| `svg`  | `image/svg+xml` | Vector, sharp at any size                                     |
+| `png`  | `image/png`     | Lossless, transparent corners                                 |
+| `webp` | `image/webp`    | Lossless, transparent corners                                 |
+| `avif` | `image/avif`    | Lossy at high quality, transparent corners; slowest to encode |
+| `jpeg` | `image/jpeg`    | Lossy at high quality; no transparency, so corners are white  |
+
+Format names are case-insensitive, and anything else returns `400`.
+
 ## Development
 
 ```sh
 # Test
 cargo test
+
+# Render a badge locally (any format)
+cargo run --example render -- "title=Built with" label=Sass color=cd6699 format=png > sass.png
 
 # Preview the API locally put GITHUB_TOKEN=... and in .dev.vars for /ci
 npx wrangler dev
