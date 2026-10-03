@@ -15,3 +15,15 @@ pre-commit:
     clippy:
       glob: "*.rs"
       run: cargo clippy --workspace --all-targets -- -D warnings
+
+    prettier:
+      glob: "*.{md,yml,yaml,json}"
+      exclude:
+        - "frontend/**"
+      run: npx --yes prettier@3 --write {staged_files}
+      stage_fixed: true
+
+    prettier-frontend:
+      root: frontend/
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
