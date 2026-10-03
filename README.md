@@ -70,13 +70,24 @@ cargo run --example render -- "title=Built with" label=Sass color=cd6699 format=
 npx wrangler dev
 ```
 
-## Deploying
+## Releasing
+
+Pushing a `v*` tag deploys the Worker and publishes a GitHub release with notes from [git-cliff](https://git-cliff.org). The tag must match the `Cargo.toml` version, so cut releases with [cargo-release](https://github.com/crate-ci/cargo-release) (`cargo binstall cargo-release`), configured in `release.toml`. It bumps `Cargo.toml` and `Cargo.lock`, commits, tags and pushes, and only dry-runs without `--execute`:
+
+```sh
+# Suggested bump from conventional commits since the last tag
+git cliff --bumped-version
+
+cargo release minor --execute  # or patch, major, X.Y.Z
+```
+
+The first release needs no level, tagging the current version: `cargo release --execute`. The workflow needs a `CLOUDFLARE_API_TOKEN` repository secret.
 
 ```sh
 # Required for /ci
 npx wrangler secret put GITHUB_TOKEN
 
-# Deploy to Cloudflare Workers
+# Manual deploy, bypassing a release
 npx wrangler deploy
 ```
 
