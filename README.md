@@ -1,8 +1,10 @@
 <div align="center">
 
-# 🛡️ BADGES 🛡️
+<img src="assets/logo-large.svg" width="524">
 
 A silly badges API.
+
+<br>
 
 <a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?style=pill&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust"></a>
 <a href="https://badges.hoppou.dev"><img alt="Deployed on Cloudflare" src="https://badges.hoppou.dev/badge?style=pill&title=Deployed%20on&label=Cloudflare&color=f38020&icon=simple:cloudflare"></a>
