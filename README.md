@@ -1,74 +1,24 @@
 <div align="center">
 
-# 🛡️ ʙᴀᴅɢᴇꜱ 🛡️
+# 🛡️ BADGES 🛡️
 
-A silly badges API, based on [Devin's Badges](https://github.com/intergrav/devins-badges).
+A silly badges API.
 
-<a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=rust&style=cozy"></a>
-<a href="https://badges.hoppou.dev"><img alt="Deployed on Cloudflare" src="https://badges.hoppou.dev/badge?title=Deployed%20on&label=Cloudflare&color=f38020&icon=cloudflare&style=cozy"></a>
-<a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI status" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=cozy"></a>
+<a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?style=pill&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust"></a>
+<a href="https://badges.hoppou.dev"><img alt="Deployed on Cloudflare" src="https://badges.hoppou.dev/badge?style=pill&title=Deployed%20on&label=Cloudflare&color=f38020&icon=simple:cloudflare"></a>
+<a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI status" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill"></a>
+<a href="https://badges.hoppou.dev/docs"><img alt="Read the docs" src="https://badges.hoppou.dev/badge?style=pill&title=Read%20the&label=Docs&color=60a5fa&icon=lucide:book-open"></a>
 
 </div>
 
 ## Usage
 
-Badges are served at `https://badges.hoppou.dev`, as SVG by default or rasterised with `format`. Every parameter is listed below.
-
-### Custom badge
+Badges are served at `https://badges.hoppou.dev`. The [docs](https://badges.hoppou.dev/docs) cover every parameter, with examples:
 
 ```http
-GET /badge?title=Built%20with&label=Sass&color=cd6699&icon=sass
+GET /badge?style=pill&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust
+GET /ci/{owner}/{repo}/{workflow}?style=pill
 ```
-
-| Parameter    | Description                                                                                                                             |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `label`      | Bold bottom line (required)                                                                                                             |
-| `title`      | Small top line; omit for a single-line badge                                                                                            |
-| `color`      | Accent colour for the label and icon (default `f1f1f1`)                                                                                 |
-| `color2`     | Second label colour, making a vertical gradient                                                                                         |
-| `titleColor` | Title colour (default `e8e8e8`)                                                                                                         |
-| `bg`         | Background gradient top; alone it gives a flat background (default derived from `color`)                                                |
-| `bg2`        | Background gradient bottom (default derived from `color`)                                                                               |
-| `icon`       | [Simple Icons](https://simpleicons.org) slug, or an https PNG/JPEG/GIF/WebP URL on an allowed host (at most 64 KiB and 2048px per side) |
-| `iconColor`  | Simple Icons fill (default `color`)                                                                                                     |
-| `style`      | `cozy` (default, 56px, title above label) or `compact` (40px, one line)                                                                 |
-| `format`     | `svg` (default), `png`, `avif`, `webp` or `jpeg`; see [Image formats](#image-formats)                                                   |
-
-Colours accept hex with or without `#`, `rgb()`, `hsl()` or CSS names.
-
-### GitHub Actions status
-
-```http
-GET /ci/{owner}/{repo}/{workflow}?branch=main&title=CI
-```
-
-`{workflow}` is a workflow file name such as `rust.yml` or a numeric workflow id. The badge is coloured by status and shows Passing, Failing, Running, Cancelled, Skipped or Unknown. Only public repositories are served.
-
-| Parameter | Description                                                 |
-| --------- | ----------------------------------------------------------- |
-| `title`   | Top line (default `CI`; empty for a single-line badge)      |
-| `branch`  | Branch to report (default: the repository's default branch) |
-| `event`   | Triggering event to report (default `push`)                 |
-| `style`   | `cozy` (default) or `compact`                               |
-| `format`  | Same as for `/badge`                                        |
-
-### Image formats
-
-```http
-GET /badge?title=Built%20with&label=Rust&color=f74c00&icon=rust&format=png
-```
-
-SVG is the default and stays sharp at any size. The other formats are rasterised from the same SVG at its natural size (56px tall for `cozy`, 40px for `compact`), so they can look soft on high-DPI screens.
-
-| Format | Content type    | Notes                                                         |
-| ------ | --------------- | ------------------------------------------------------------- |
-| `svg`  | `image/svg+xml` | Vector, sharp at any size                                     |
-| `png`  | `image/png`     | Lossless, transparent corners                                 |
-| `webp` | `image/webp`    | Lossless, transparent corners                                 |
-| `avif` | `image/avif`    | Lossy at high quality, transparent corners; slowest to encode |
-| `jpeg` | `image/jpeg`    | Lossy at high quality; no transparency, so corners are white  |
-
-Format names are case-insensitive, and anything else returns `400`.
 
 ## Layout
 
@@ -92,6 +42,9 @@ cargo test
 # Render a badge locally (any format)
 cargo run --example render -- "title=Built with" label=Sass color=cd6699 format=png > sass.png
 
+# Render a workflow status badge in any state, without GitHub (or use /ci/...?state=running)
+cargo run --example render -- state=running style=pill > running.svg
+
 # Preview the API locally; put GITHUB_TOKEN=... in backend/.dev.vars for /ci
 cd backend && npx wrangler dev
 ```
@@ -105,6 +58,12 @@ Each doc starts with a frontmatter block. `title` is the page's heading, its bro
 title: Overview
 section: Getting started
 ---
+```
+
+An image's Markdown title becomes a caption below it, for an image on its own line or alone in a table cell (anywhere else fails the build):
+
+```markdown
+![Built with Rust](https://badges.hoppou.dev/badge?label=Rust "Built with Rust")
 ```
 
 ```sh
@@ -149,4 +108,4 @@ Never commit tokens: `backend/.dev.vars` is ignored by git, and production uses 
 
 This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md).
 
-The bundled Inter fonts are licensed under the SIL Open Font License ([backend/assets/fonts/LICENSE.txt](backend/assets/fonts/LICENSE.txt)). Icons come from [Simple Icons](https://simpleicons.org) (CC0), and the badge design is based on [Devin's Badges](https://github.com/intergrav/devins-badges) (CC0).
+The bundled Inter and JetBrains Mono fonts are licensed under the SIL Open Font License ([Inter](backend/assets/fonts/LICENSE.txt), [JetBrains Mono](backend/assets/fonts/LICENSE-JetBrainsMono.txt)). Icons come from [Simple Icons](https://simpleicons.org) (CC0) and [Lucide](https://lucide.dev) (ISC, [bundled marks](backend/assets/icons/LICENSE-lucide.txt)).
