@@ -4,86 +4,71 @@
 @import '@fontsource-variable/stack-sans-text';
 @import '@fontsource-variable/stack-sans-headline';
 
+/* Declared before the Catppuccin import, which would otherwise build its dark
+   block with Tailwind's default variant and follow the OS, not the toggle */
 @custom-variant dark (&:is(.dark *));
 
-/* Classes are tw-prose and tw-prose-invert. Prettier lowercases CSS
-   property names, which would hide the option from the plugin */
+/* Only Catppuccin colours: drop Tailwind's default palette. This must come
+   before the Catppuccin import, which would otherwise be dropped with it */
+@theme {
+	--color-*: initial;
+}
+
+/* Catppuccin: Latte on :root, Mocha from the .mocha class that mode-watcher
+   adds with .dark (the import's own dark block nests :root under the variant,
+   which a class can't match). Utilities are ctp-*; plain CSS reads the
+   --catppuccin-color-* variables, since the theme is inline and emits no
+   --color-ctp-* variables */
+@import '@catppuccin/tailwindcss/mocha.css';
+
+/* The class is tw-prose. Prettier lowercases CSS property names, which would
+   hide the option from the plugin */
 /* prettier-ignore */
 @plugin '@tailwindcss/typography' {
    className: tw-prose;
 }
 
+/* shadcn tokens in Catppuccin colours. The --catppuccin-color-* variables
+   switch to Mocha with the .mocha class, so one mapping serves both modes */
 :root {
 	--radius: 0.625rem;
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.129 0.042 264.695);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.129 0.042 264.695);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.129 0.042 264.695);
-	--primary: oklch(0.208 0.042 265.755);
-	--primary-foreground: oklch(0.984 0.003 247.858);
-	--secondary: oklch(0.968 0.007 247.896);
-	--secondary-foreground: oklch(0.208 0.042 265.755);
-	--muted: oklch(0.968 0.007 247.896);
-	--muted-foreground: oklch(0.554 0.046 257.417);
-	--accent: oklch(0.968 0.007 247.896);
-	--accent-foreground: oklch(0.208 0.042 265.755);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.929 0.013 255.508);
-	--input: oklch(0.929 0.013 255.508);
-	--ring: oklch(0.704 0.04 256.788);
-	--chart-1: oklch(0.646 0.222 41.116);
-	--chart-2: oklch(0.6 0.118 184.704);
-	--chart-3: oklch(0.398 0.07 227.392);
-	--chart-4: oklch(0.828 0.189 84.429);
-	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.984 0.003 247.858);
-	--sidebar-foreground: oklch(0.129 0.042 264.695);
-	--sidebar-primary: oklch(0.208 0.042 265.755);
-	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-	/* Selected/hovered sidebar item: slate-200 stands out from the off-white sidebar */
-	--sidebar-accent: var(--color-slate-200);
-	--sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-	--sidebar-border: oklch(0.929 0.013 255.508);
-	--sidebar-ring: oklch(0.704 0.04 256.788);
+	--background: var(--catppuccin-color-base);
+	--foreground: var(--catppuccin-color-text);
+	--card: var(--catppuccin-color-mantle);
+	--card-foreground: var(--catppuccin-color-text);
+	--popover: var(--catppuccin-color-mantle);
+	--popover-foreground: var(--catppuccin-color-text);
+	--primary: var(--catppuccin-color-mauve);
+	--primary-foreground: var(--catppuccin-color-base);
+	--secondary: var(--catppuccin-color-surface0);
+	--secondary-foreground: var(--catppuccin-color-text);
+	--muted: var(--catppuccin-color-surface0);
+	--muted-foreground: var(--catppuccin-color-subtext0);
+	--accent: var(--catppuccin-color-surface0);
+	--accent-foreground: var(--catppuccin-color-text);
+	--destructive: var(--catppuccin-color-red);
+	--border: var(--catppuccin-color-surface0);
+	--input: var(--catppuccin-color-surface1);
+	--ring: var(--catppuccin-color-lavender);
+	--chart-1: var(--catppuccin-color-mauve);
+	--chart-2: var(--catppuccin-color-teal);
+	--chart-3: var(--catppuccin-color-peach);
+	--chart-4: var(--catppuccin-color-blue);
+	--chart-5: var(--catppuccin-color-pink);
+	--sidebar: var(--catppuccin-color-mantle);
+	--sidebar-foreground: var(--catppuccin-color-text);
+	--sidebar-primary: var(--catppuccin-color-mauve);
+	--sidebar-primary-foreground: var(--catppuccin-color-base);
+	/* Selected/hovered sidebar item */
+	--sidebar-accent: var(--catppuccin-color-surface0);
+	--sidebar-accent-foreground: var(--catppuccin-color-text);
+	--sidebar-border: var(--catppuccin-color-surface0);
+	--sidebar-ring: var(--catppuccin-color-lavender);
 }
 
+/* Same as the page in dark mode; the divider alone separates them */
 .dark {
-	--background: oklch(0.129 0.042 264.695);
-	--foreground: oklch(0.984 0.003 247.858);
-	--card: oklch(0.208 0.042 265.755);
-	--card-foreground: oklch(0.984 0.003 247.858);
-	--popover: oklch(0.208 0.042 265.755);
-	--popover-foreground: oklch(0.984 0.003 247.858);
-	--primary: oklch(0.929 0.013 255.508);
-	--primary-foreground: oklch(0.208 0.042 265.755);
-	--secondary: oklch(0.279 0.041 260.031);
-	--secondary-foreground: oklch(0.984 0.003 247.858);
-	--muted: oklch(0.279 0.041 260.031);
-	--muted-foreground: oklch(0.704 0.04 256.788);
-	--accent: oklch(0.279 0.041 260.031);
-	--accent-foreground: oklch(0.984 0.003 247.858);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.551 0.027 264.364);
-	--chart-1: oklch(0.488 0.243 264.376);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-	/* Same as the page; the divider alone separates them */
 	--sidebar: var(--background);
-	--sidebar-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-	/* Selected/hovered sidebar item: slate-900 is a quieter step up from the page */
-	--sidebar-accent: var(--color-slate-900);
-	--sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-	/* A solid divider; the theme's translucent white read as a glow */
-	--sidebar-border: var(--color-slate-800);
-	--sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
 @theme inline {
@@ -143,11 +128,35 @@
 	}
 }
 
-/* Code blocks highlighted by rehype-pretty-code (Shiki). Both themes arrive as
-   inline --shiki-light/--shiki-dark variables; the .dark class picks one, so the
-   right colours apply before any script runs */
+/* Docs prose (the typography plugin's own grey palette otherwise). The
+   Catppuccin variables switch with the theme, so no tw-prose-invert */
+.tw-prose {
+	--tw-prose-body: var(--catppuccin-color-text);
+	--tw-prose-headings: var(--catppuccin-color-text);
+	--tw-prose-lead: var(--catppuccin-color-subtext1);
+	--tw-prose-links: var(--catppuccin-color-blue);
+	--tw-prose-bold: var(--catppuccin-color-text);
+	--tw-prose-counters: var(--catppuccin-color-overlay1);
+	--tw-prose-bullets: var(--catppuccin-color-overlay0);
+	--tw-prose-hr: var(--catppuccin-color-surface0);
+	--tw-prose-quotes: var(--catppuccin-color-subtext1);
+	--tw-prose-quote-borders: var(--catppuccin-color-surface1);
+	--tw-prose-captions: var(--catppuccin-color-subtext0);
+	--tw-prose-kbd: var(--catppuccin-color-text);
+	--tw-prose-kbd-shadows: var(--catppuccin-color-overlay0);
+	--tw-prose-code: var(--catppuccin-color-pink);
+	--tw-prose-pre-code: var(--catppuccin-color-text);
+	--tw-prose-pre-bg: var(--catppuccin-color-mantle);
+	--tw-prose-th-borders: var(--catppuccin-color-surface1);
+	--tw-prose-td-borders: var(--catppuccin-color-surface0);
+}
+
+/* Code blocks highlighted by rehype-pretty-code (Shiki) with Catppuccin Latte
+   and Mocha. Both arrive as inline --shiki-light/--shiki-dark variables; the
+   .dark class picks one, so the right colours apply before any script runs.
+   Mantle sets the block off from the page, which shares Shiki's base */
 [data-rehype-pretty-code-figure] pre {
-	background-color: var(--shiki-light-bg);
+	background-color: var(--catppuccin-color-mantle);
 }
 
 [data-rehype-pretty-code-figure] pre,
@@ -155,10 +164,6 @@
 	color: var(--shiki-light);
 	font-style: var(--shiki-light-font-style);
 	text-decoration: var(--shiki-light-text-decoration);
-}
-
-.dark [data-rehype-pretty-code-figure] pre {
-	background-color: var(--shiki-dark-bg);
 }
 
 .dark [data-rehype-pretty-code-figure] pre,

@@ -7,14 +7,14 @@
 </svelte:head>
 
 <!-- Generated at build time from our own markdown, which may not contain raw HTML.
-     dark: follows the .dark class mode-watcher sets before first paint.
+     tw-prose colours are Catppuccin's, which switch with the theme, so there's no invert.
      w-full: with auto margins in a flex column the article would otherwise size to its
      widest code line instead of the column, pushing the page sideways.
      wrap-break-word: long URLs and host names break instead of running off small screens;
      td wrap-anywhere: table cells need it too, as tables otherwise size to their longest word;
      td img/figure my-0 and align-middle: badges in tables sit tight and line up with their text -->
 <article
-	class="mx-auto tw-prose w-full px-4 py-8 wrap-break-word dark:tw-prose-invert [&_td]:wrap-anywhere [&_td_figure]:my-0 [&_td_img]:my-0 [&_td,&_th]:align-middle"
+	class="mx-auto tw-prose w-full px-4 py-8 wrap-break-word [&_td]:wrap-anywhere [&_td_figure]:my-0 [&_td_img]:my-0 [&_td,&_th]:align-middle"
 >
 	<h1>{data.title}</h1>
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
