@@ -8,13 +8,13 @@ order: 30
 
 Errors come back as plain text with an HTTP status, so a broken badge URL shows its reason when opened directly.
 
-| Status | When                                                                                                           |
-| ------ | -------------------------------------------------------------------------------------------------------------- |
-| `400`  | A parameter is missing or invalid: no `label`, an unknown `style` or `format`, a bad colour, a disallowed icon |
-| `404`  | The icon, repository or workflow doesn't exist; private repositories also answer `404`                         |
-| `502`  | GitHub or the icon host returned an error                                                                      |
-| `503`  | GitHub's rate limit was reached; try again shortly                                                             |
-| `504`  | GitHub or the icon host took too long                                                                          |
+| Status | When                                                                                                                                     |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `400`  | A parameter is missing or invalid: no `label`, an unknown `style`, `size`, `theme`, `format` or `state`, a bad colour, a disallowed icon |
+| `404`  | The icon, repository or workflow doesn't exist; private repositories also answer `404`                                                   |
+| `502`  | GitHub or the icon host returned an error                                                                                                |
+| `503`  | GitHub's rate limit was reached; try again shortly                                                                                       |
+| `504`  | GitHub or the icon host took too long                                                                                                    |
 
 ## Limits
 

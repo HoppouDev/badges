@@ -9,15 +9,15 @@ A badge is an image URL. Encode spaces and other special characters in the query
 ## Markdown
 
 ```markdown
-![Built with Svelte](https://badges.hoppou.dev/badge?title=Built%20with&label=Svelte&color=ff3e00&icon=svelte)
+![Built with Svelte](https://badges.hoppou.dev/badge?title=Built%20with&label=Svelte&color=ff3e00&icon=simple:svelte)
 ```
 
-![Built with Svelte](https://badges.hoppou.dev/badge?title=Built%20with&label=Svelte&color=ff3e00&icon=svelte)
+![Built with Svelte](https://badges.hoppou.dev/badge?title=Built%20with&label=Svelte&color=ff3e00&icon=simple:svelte)
 
 Wrap it in a link to make it clickable:
 
 ```markdown
-[![Built with Svelte](https://badges.hoppou.dev/badge?title=Built%20with&label=Svelte&color=ff3e00&icon=svelte)](https://svelte.dev)
+[![Built with Svelte](https://badges.hoppou.dev/badge?title=Built%20with&label=Svelte&color=ff3e00&icon=simple:svelte)](https://svelte.dev)
 ```
 
 ## HTML
@@ -26,7 +26,7 @@ Wrap it in a link to make it clickable:
 <a href="https://svelte.dev">
 	<img
 		alt="Built with Svelte"
-		src="https://badges.hoppou.dev/badge?title=Built%20with&label=Svelte&color=ff3e00&icon=svelte"
+		src="https://badges.hoppou.dev/badge?title=Built%20with&label=Svelte&color=ff3e00&icon=simple:svelte"
 	/>
 </a>
 ```
@@ -37,7 +37,7 @@ GitHub READMEs render HTML too, which is handy for centring a row of badges:
 <div align="center">
 	<img
 		alt="Built with Rust"
-		src="https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=rust"
+		src="https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=simple:rust"
 	/>
 	<img alt="CI status" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml" />
 </div>
