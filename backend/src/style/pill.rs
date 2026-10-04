@@ -231,8 +231,7 @@ struct PillSvg<'a> {
 	css: Option<String>,
 	paint: Paint,
 	chip: Option<Chip>,
-	/// The status mark, or the dot compact badges lead with when there's no
-	/// icon
+	/// The status mark, drawn in place of the icon
 	mark: Option<MarkDraw>,
 	icon: Option<&'a Icon>,
 	icon_box: IconBox,
@@ -316,19 +315,18 @@ pub fn render(spec: &BadgeSpec) -> Result<String, BadgeError> {
 			(icon_x, chip, mark, title, label_x, right_padding)
 		}
 		Size::Compact => {
-			// A mark, dot or icon centred in the round left end, then the
-			// title in the accent, then the label
+			// A mark or icon centred in the round left end, then the title in
+			// the accent, then the label; with neither, the text starts at the
+			// edge padding
 			let marker_x = centre - icon_size / 2.0;
-			let mut x = marker_x + icon_size + g.icon_gap;
-			let mark = match (spec.mark, icon) {
-				(None, Some(_)) => None,
-				(mark, _) => Some(MarkDraw::new(
-					mark.unwrap_or(Mark::Dot),
-					centre,
-					centre,
-					icon_size,
-				)),
+			let mut x = if leads {
+				marker_x + icon_size + g.icon_gap
+			} else {
+				g.edge_padding
 			};
+			let mark = spec
+				.mark
+				.map(|m| MarkDraw::new(m, centre, centre, icon_size));
 			let weight = Weight::MonoSemiBold;
 			let title = spec
 				.title
@@ -478,11 +476,26 @@ mod tests {
 			["cx", "cy"].map(|a| dot.attribute(a).unwrap()),
 			["22", "22"]
 		);
-		// Status chip: 34px with a dot centred in its round end
-		let compact =
-			style::render(&pill(None, "operational", Size::Compact, Theme::Dark)).unwrap();
+		// Compact: 34px, a mark centred in its round end
+		let mut status = pill(None, "operational", Size::Compact, Theme::Dark);
+		status.mark = Some(Mark::Dot);
+		let compact = style::render(&status).unwrap();
 		assert_eq!(root_attr(&compact, "height"), "34");
 		assert!(compact.contains("cx=\"17\" cy=\"17\""));
+		// Without a mark or icon there's no dot, and the text starts at the
+		// edge padding, like a cozy badge with no chip
+		let plain =
+			style::render(&pill(Some("release"), "v2", Size::Compact, Theme::Dark)).unwrap();
+		assert!(!plain.contains("<circle"));
+		let title = Document::parse(&plain).unwrap();
+		let title = title
+			.descendants()
+			.filter(|n| n.has_tag_name("path"))
+			.find_map(|n| n.attribute("d"))
+			.unwrap()
+			.to_string();
+		let start: f64 = title[1..title.find(' ').unwrap()].parse().unwrap();
+		assert!((17.0..19.0).contains(&start), "{start}");
 	}
 
 	#[test]

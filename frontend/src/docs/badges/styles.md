@@ -40,7 +40,7 @@ GET /badge?style=pill&title=build&label=passing&color=34d399&icon=simple:githuba
 ```
 
 - **Cozy** is 44px tall. The icon and the title, in capitals, sit in a tinted chip on the left, and the label follows.
-- **Compact** is 34px tall. A dot, or the icon if there is one, leads the title and label on one line.
+- **Compact** is 34px tall. The icon, if there is one, leads the title and label on one line.
 
 ## Themes
 
