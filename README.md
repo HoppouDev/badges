@@ -7,7 +7,6 @@ A silly badges API.
 <br>
 
 <a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?style=pill&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust"></a>
-<a href="https://badges.hoppou.dev"><img alt="Deployed on Cloudflare" src="https://badges.hoppou.dev/badge?style=pill&title=Deployed%20on&label=Cloudflare&color=f38020&icon=simple:cloudflare"></a>
 <a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI status" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill"></a>
 <a href="https://badges.hoppou.dev/docs"><img alt="Read the docs" src="https://badges.hoppou.dev/badge?style=pill&title=Read%20the&label=Docs&color=60a5fa&icon=lucide:book-open"></a>
 
