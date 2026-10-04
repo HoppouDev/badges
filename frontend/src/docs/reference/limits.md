@@ -8,22 +8,22 @@ order: 30
 
 Errors come back as plain text with an HTTP status, so a broken badge URL shows its reason when opened directly.
 
-| Status | When                                                                                                                                     |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `400`  | A parameter is missing or invalid: no `label`, an unknown `style`, `size`, `theme`, `format` or `state`, a bad colour, a disallowed icon |
-| `404`  | The icon, repository or workflow doesn't exist; private repositories also answer `404`                                                   |
-| `502`  | GitHub or the icon host returned an error                                                                                                |
-| `503`  | GitHub's rate limit was reached; try again shortly                                                                                       |
-| `504`  | GitHub or the icon host took too long                                                                                                    |
+| Status | When                                                                                                                                                                                        |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `400`  | A parameter is missing or invalid: no `label`, an unknown `style`, `size`, `theme`, `format` or `state`, a bad colour, an icon without a set, a disallowed image host, a renamed repository |
+| `404`  | The icon, repository or workflow doesn't exist; private repositories also answer `404`                                                                                                      |
+| `502`  | GitHub or the icon host returned an error                                                                                                                                                   |
+| `503`  | GitHub's rate limit was reached; try again shortly                                                                                                                                          |
+| `504`  | GitHub or the icon host took too long                                                                                                                                                       |
 
 ## Limits
 
-| Limit               | Value                                                     |
-| ------------------- | --------------------------------------------------------- |
-| `title` and `label` | 64 characters each, in characters the badge font supports |
-| Remote icon size    | 64 KiB, and at most 2048 pixels on each side              |
-| Remote icon hosts   | See [Icons](/docs/badges/icons)                           |
-| Repositories        | Public only                                               |
+| Limit               | Value                                                  |
+| ------------------- | ------------------------------------------------------ |
+| `title` and `label` | 64 characters each, in characters the badge fonts have |
+| Image icon size     | 64 KiB, and at most 2048 pixels on each side           |
+| Image icon hosts    | See [Icons](/docs/badges/icons#image-urls)             |
+| Repositories        | Public only                                            |
 
 ## Caching
 
@@ -34,4 +34,4 @@ Errors come back as plain text with an HTTP status, so a broken badge URL shows 
 | Invalid custom badge requests (`4xx`)          | 5 minutes | 5 minutes       |
 | Other custom badge errors (`5xx`)              | never     | never           |
 
-A custom badge never changes for a given URL, so there's nothing to purge: change the URL to get a new badge.
+A custom badge is cached for its URL. When the service is updated, an old copy can keep showing for up to a day in browsers and a week at the edge; changing the URL, for example by adding `&v=2`, gets the new badge at once.

@@ -4,65 +4,66 @@ section: GitHub Actions
 order: 20
 ---
 
-Show whether a GitHub Actions workflow is passing:
+A workflow status badge shows whether a GitHub Actions workflow is passing.
 
 ```http
 GET /ci/{owner}/{repo}/{workflow}
 ```
 
 ![CI](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml)
+![CI](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill)
 
 ```markdown
-![CI](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml)
+![CI](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill)
 ```
 
 `{workflow}` is the workflow's file name, such as `rust.yml`, or its numeric id. Only public repositories are served.
 
 ## Parameters
 
-| Parameter | Description                                                              |
-| --------- | ------------------------------------------------------------------------ |
-| `title`   | Top line (default `CI`; empty for a single-line badge)                   |
-| `branch`  | Branch to report (default: the repository's default branch)              |
-| `event`   | Triggering event to report (default `push`)                              |
-| `style`   | `devin` (default) or `pill`; see [Styles and sizes](/docs/badges/styles) |
-| `size`    | `cozy` (default) or `compact`                                            |
-| `theme`   | Pill colours: `auto` (default), `dark` or `light`                        |
-| `format`  | Same as for [custom badges](/docs/badges/formats)                        |
-| `state`   | Show this [state](#states) without asking GitHub; for previews and tests |
+| Parameter | Description                                                                         |
+| --------- | ----------------------------------------------------------------------------------- |
+| `title`   | Text before the state (default `CI`; empty for a state-only badge)                  |
+| `branch`  | Branch to report (default: the repository's default branch)                         |
+| `event`   | Triggering event to report (default `push`)                                         |
+| `state`   | Show this [state](#states) without asking GitHub; see [Previewing](#previewing)     |
+| `style`   | `devin` (default) or `pill`; see [Styles and sizes](/docs/badges/styles)            |
+| `size`    | `cozy` (default) or `compact`                                                       |
+| `theme`   | Pill only: `auto` (default), `dark` or `light`; see [Themes](/docs/badges/themes)   |
+| `format`  | `svg` (default), `png`, `avif` or `webp`; see [Image formats](/docs/badges/formats) |
 
-Only runs triggered by `event` count, so pull requests from forks can't change a badge that follows `push` runs.
+The badge reports the latest run triggered by `event`, so pull requests from forks can't change a badge that follows `push` runs.
+
+| Badge                                                                                    | Query                    |
+| ---------------------------------------------------------------------------------------- | ------------------------ |
+| ![Titled](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?title=Tests)            | `title=Tests`            |
+| ![State only](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?title=)             | `title=`                 |
+| ![Branch](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?branch=main&title=main) | `branch=main&title=main` |
+| ![Compact](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?size=compact)          | `size=compact`           |
 
 ## States
 
-The badge reports the latest matching run, coloured like GitHub's own status icons. Devin badges show the GitHub Actions icon; [pill badges](/docs/badges/styles#pill) show a status mark in its place.
+States are coloured like GitHub's own status icons. Devin badges show the GitHub Actions logo; pill badges show a mark for the state instead.
 
-| State     | Meaning                                        | Pill mark                      |
-| --------- | ---------------------------------------------- | ------------------------------ |
-| Passing   | The run succeeded                              | Lucide's `check`               |
-| Failing   | The run failed, timed out or failed to start   | Lucide's `x`                   |
-| Running   | The run is queued or in progress               | Lucide's `refresh-cw`, turning |
-| Cancelled | The run was cancelled                          | Dot                            |
-| Skipped   | The run was skipped or finished as neutral     | Dot                            |
-| Unknown   | No matching run yet, or an unrecognised result | Dot                            |
+| State     | The run                   | Devin                                                                                | Pill                                                                                            |
+| --------- | ------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Passing   | Succeeded                 | ![Passing](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=passing)     | ![Passing](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=passing&style=pill)     |
+| Failing   | Failed or timed out       | ![Failing](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=failing)     | ![Failing](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=failing&style=pill)     |
+| Running   | Is queued or in progress  | ![Running](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=running)     | ![Running](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=running&style=pill)     |
+| Cancelled | Was cancelled             | ![Cancelled](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=cancelled) | ![Cancelled](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=cancelled&style=pill) |
+| Skipped   | Was skipped or neutral    | ![Skipped](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=skipped)     | ![Skipped](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=skipped&style=pill)     |
+| Unknown   | None yet, or unrecognised | ![Unknown](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=unknown)     | ![Unknown](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=unknown&style=pill)     |
 
-The Running icon only turns in SVG; other [image formats](/docs/badges/formats) show it standing still, and so do viewers who ask for reduced motion.
+The pill's running icon turns. It stands still in raster [image formats](/docs/badges/formats) and for viewers who ask for reduced motion.
 
-To preview a state without waiting for a run, add `state` (`passing`, `failing`, `running`, `cancelled`, `skipped` or `unknown`). GitHub isn't asked, so the repository and workflow aren't checked either, only their spelling:
+## Previewing
+
+`state` shows a state without waiting for a run: `passing`, `failing`, `running`, `cancelled`, `skipped` or `unknown`. GitHub isn't asked, so the repository and workflow aren't checked either, only their spelling. The table above is made this way.
 
 ```http
 GET /ci/HoppouDev/badges/rust.yml?style=pill&state=running
 ```
 
-## Examples
+## Freshness
 
-| Badge                                                                                    | Query                    |
-| ---------------------------------------------------------------------------------------- | ------------------------ |
-| ![Default](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml)                       | (none)                   |
-| ![Titled](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?title=Tests)            | `title=Tests`            |
-| ![Single line](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?title=)            | `title=`                 |
-| ![Compact](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?size=compact)          | `size=compact`           |
-| ![Pill](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill)               | `style=pill`             |
-| ![Branch](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?branch=main&title=main) | `branch=main&title=main` |
-
-Status badges are cached for a minute, so a new run can take that long to show.
+Status badges are cached for a minute, so a new run can take that long to show. A repository that has been renamed returns `400`; use its new name.
