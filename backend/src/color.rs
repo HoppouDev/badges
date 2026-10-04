@@ -1,6 +1,8 @@
-//! Colour parsing and the default background derivation
+//! Colour parsing, the Devin background derivation and the pill style's
+//! per-theme accent tones
 
-use palette::{FromColor, Hsl, Srgb};
+use palette::convert::FromColorUnclamped;
+use palette::{Clamp, FromColor, Hsl, Oklch, ShiftHue, Srgb};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -40,6 +42,70 @@ impl Rgb {
 		let c: Srgb<u8> = Srgb::from_color(hsl).into_format();
 		Rgb(c.red, c.green, c.blue)
 	}
+
+	fn to_oklch(self) -> Oklch<f64> {
+		Oklch::from_color(Srgb::new(self.0, self.1, self.2).into_format::<f64>())
+	}
+
+	/// Back to sRGB; out-of-gamut colours lose chroma (by bisection) until
+	/// they fit, keeping lightness and hue rather than clipping channels
+	fn from_oklch(c: Oklch<f64>) -> Self {
+		let in_gamut = |c: Oklch<f64>| {
+			// `from_color` would clamp, hiding out-of-gamut channels
+			let s = Srgb::<f64>::from_color_unclamped(c);
+			[s.red, s.green, s.blue]
+				.iter()
+				.all(|v| (-1e-6..=1.0 + 1e-6).contains(v))
+		};
+		let mut fit = c;
+		if !in_gamut(fit) {
+			let (mut lo, mut hi) = (0.0, c.chroma);
+			for _ in 0..16 {
+				let mid = (lo + hi) / 2.0;
+				fit.chroma = mid;
+				if in_gamut(fit) {
+					lo = mid;
+				} else {
+					hi = mid;
+				}
+			}
+			fit.chroma = lo;
+		}
+		let s: Srgb<u8> = Srgb::from_color(fit).clamp().into_format();
+		Rgb(s.red, s.green, s.blue)
+	}
+}
+
+/// OKLCH lightness an accent is kept within on dark and light backgrounds;
+/// fitted to the hand-picked GitHub dark/light pairs of the pill design
+/// (for example #34d399 on dark, #047857 on light)
+const ON_DARK_LIGHTNESS: (f64, f64) = (0.72, 0.92);
+const ON_LIGHT_LIGHTNESS: (f64, f64) = (0.42, 0.55);
+
+/// OKLCH lightness above which a background counts as light
+const LIGHT_BACKGROUND: f64 = 0.65;
+
+/// Whether text on `bg` should use dark colours
+pub fn is_light(bg: Rgb) -> bool {
+	bg.to_oklch().l > LIGHT_BACKGROUND
+}
+
+/// The accent as text or stroke on a dark or light background: lightness is
+/// moved just enough to stay readable, keeping hue and chroma
+pub fn tone(accent: Rgb, on_light: bool) -> Rgb {
+	let (min, max) = if on_light {
+		ON_LIGHT_LIGHTNESS
+	} else {
+		ON_DARK_LIGHTNESS
+	};
+	let mut c = accent.to_oklch();
+	c.l = c.l.clamp(min, max);
+	Rgb::from_oklch(c)
+}
+
+/// The accent with its hue rotated by `degrees`, e.g. for a gradient's end
+pub fn shift_hue(accent: Rgb, degrees: f64) -> Rgb {
+	Rgb::from_oklch(accent.to_oklch().shift_hue(degrees))
 }
 
 impl fmt::Display for Rgb {
@@ -96,5 +162,30 @@ mod tests {
 			(top.to_string(), bottom.to_string()),
 			("#311624".into(), "#1c0d14".into())
 		);
+	}
+
+	#[test]
+	fn tones_stay_readable() {
+		let l = |c: Rgb| c.to_oklch().l;
+		// The design's own dark-theme green is already in range
+		assert_eq!(tone(Rgb(0x34, 0xd3, 0x99), false), Rgb(0x34, 0xd3, 0x99));
+		for c in [
+			Rgb(0x34, 0xd3, 0x99),
+			Rgb(0x0d, 0x11, 0x17),
+			Rgb(0xff, 0xff, 0xff),
+			Rgb(0xf7, 0x4c, 0x00),
+		] {
+			let (dark, light) = (l(tone(c, false)), l(tone(c, true)));
+			assert!(dark >= ON_DARK_LIGHTNESS.0 - 0.01, "{c} on dark: {dark}");
+			assert!(
+				light <= ON_LIGHT_LIGHTNESS.1 + 0.01,
+				"{c} on light: {light}"
+			);
+		}
+		// Hue survives the lightness change
+		let hue = |c: Rgb| c.to_oklch().hue.into_positive_degrees();
+		let orange = Rgb(0xf7, 0x4c, 0x00);
+		assert!((hue(tone(orange, true)) - hue(orange)).abs() < 3.0);
+		assert!((hue(shift_hue(orange, 40.0)) - hue(orange) - 40.0).abs() < 3.0);
 	}
 }

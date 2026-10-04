@@ -10,36 +10,44 @@ use std::borrow::Cow;
 use std::fmt::Write;
 use std::time::Duration;
 
-use crate::badge::{
-	render, BadgeError, BadgeSpec, ColorOptions, Style, DEFAULT_ACCENT, DEFAULT_TITLE,
-};
 use crate::ci::{self, CiError, CiParams, CiState};
 use crate::color::Rgb;
 use crate::icon::{Icon, IconError, IconSource};
 use crate::raster::{self, Format};
+use crate::spec::{BadgeError, BadgeSpec, ColorOptions, DEFAULT_ACCENT};
+use crate::style::devin::DEFAULT_TITLE;
+use crate::style::{render, Look};
 
 /// Query parameters and their meaning; the single source for the help text
 pub const PARAMS: &[(&str, &str)] = &[
 	("label", "bold bottom line (required)"),
 	("title", "small top line; omit for a single-line badge"),
-	("color", "accent colour for label and icon"),
-	("color2", "second label colour, making a vertical gradient"),
-	("titleColor", "title colour"),
+	(
+		"color",
+		"accent colour for label and icon (pill: gradient start)",
+	),
+	(
+		"color2",
+		"second accent colour: devin label gradient, pill gradient end",
+	),
+	("titleColor", "devin title colour"),
 	(
 		"bg",
-		"background gradient top; alone it gives a flat background",
+		"background (devin: gradient top; alone it gives a flat background)",
 	),
-	("bg2", "background gradient bottom"),
+	("bg2", "devin background gradient bottom"),
 	(
 		"icon",
-		"Simple Icons slug, or an https png/jpeg/gif/webp url on an allowed host",
+		"simple:<slug> (Simple Icons), lucide:<name> (Lucide), or an https png/jpeg/gif/webp url on an allowed host",
 	),
-	("iconColor", "Simple Icons fill (defaults to color)"),
-	("style", "cozy (default) or compact"),
+	("iconColor", "devin icon colour for simple: and lucide: icons (defaults to color)"),
+	("style", "devin (default) or pill"),
+	("size", "cozy (default) or compact"),
 	(
-		"format",
-		"svg (default), png, avif, webp or jpeg (white corners)",
+		"theme",
+		"pill colours: auto (default, follows the viewer), dark or light",
 	),
+	("format", "svg (default), png, avif or webp"),
 ];
 
 /// Routes served by `/badge`
@@ -92,6 +100,8 @@ pub struct Params {
 	pub icon: Option<String>,
 	pub icon_color: Option<String>,
 	pub style: Option<String>,
+	pub size: Option<String>,
+	pub theme: Option<String>,
 	pub format: Option<String>,
 }
 
@@ -110,6 +120,14 @@ impl Params {
 		Format::parse(self.format.as_deref())
 	}
 
+	pub fn look(&self) -> Result<Look, BadgeError> {
+		Look::parse(
+			self.style.as_deref(),
+			self.size.as_deref(),
+			self.theme.as_deref(),
+		)
+	}
+
 	/// Validate into a renderable spec
 	pub fn into_spec(self, icon: Option<Icon>) -> Result<BadgeSpec, BadgeError> {
 		let mut spec = BadgeSpec::new(self.title.as_deref(), &self.label)?;
@@ -122,7 +140,7 @@ impl Params {
 			bg_bottom: parse_color_param(self.bg2.as_deref(), "bg2")?,
 		};
 		spec.icon = icon;
-		spec.style = Style::parse(self.style.as_deref())?;
+		spec.look = self.look()?;
 		Ok(spec)
 	}
 }
@@ -140,7 +158,7 @@ fn parse_color_param(value: Option<&str>, name: &'static str) -> Result<Option<R
 pub fn help() -> String {
 	let mut s = String::from(
 		"Cozy badges in the style of Devin's Badges\n\n\
-         GET /badge?title=Built%20with&label=Sass&color=cd6699&icon=sass\n\n",
+         GET /badge?title=Built%20with&label=Sass&color=cd6699&icon=simple:sass\n\n",
 	);
 	for (name, desc) in PARAMS {
 		let _ = writeln!(s, "{name:<11}{desc}");
@@ -165,8 +183,9 @@ pub fn help() -> String {
 /// Render `params` into an image or error response
 pub fn respond(params: Params, icon: Option<Icon>) -> Response {
 	let body = params.format().and_then(|format| {
-		let svg = params.into_spec(icon).and_then(|spec| render(&spec))?;
-		Ok((format, raster::encode(svg, format)?))
+		let mut spec = params.into_spec(icon)?;
+		spec.prepare_for(format);
+		Ok((format, raster::encode(render(&spec)?, format)?))
 	});
 	image_response(body.map_err(ApiError::from), CachePolicy::Badge)
 }
@@ -174,8 +193,9 @@ pub fn respond(params: Params, icon: Option<Icon>) -> Response {
 /// Render a workflow status badge
 pub fn respond_ci(state: CiState, params: &CiParams, icon: Option<Icon>) -> Response {
 	let body = params.format().map_err(ApiError::from).and_then(|format| {
-		let svg = ci::spec(state, params, icon).and_then(|spec| render(&spec))?;
-		Ok((format, raster::encode(svg, format)?))
+		let mut spec = ci::spec(state, params, icon)?;
+		spec.prepare_for(format);
+		Ok((format, raster::encode(render(&spec)?, format)?))
 	});
 	image_response(body, CachePolicy::Ci)
 }
@@ -278,6 +298,8 @@ impl HttpStatus for BadgeError {
 			| Self::TooLong(_)
 			| Self::InvalidColor(_)
 			| Self::InvalidStyle
+			| Self::InvalidSize
+			| Self::InvalidTheme
 			| Self::InvalidFormat
 			| Self::Unsupported { .. } => StatusCode::BAD_REQUEST,
 			Self::Icon(e) => e.status(),
@@ -295,7 +317,10 @@ impl HttpStatus for CiError {
 			| Self::InvalidBranch
 			| Self::InvalidEvent
 			| Self::InvalidStyle
-			| Self::InvalidFormat => StatusCode::BAD_REQUEST,
+			| Self::InvalidSize
+			| Self::InvalidTheme
+			| Self::InvalidFormat
+			| Self::InvalidState => StatusCode::BAD_REQUEST,
 			// The redirect target couldn't be followed; the URL needs the new name
 			Self::Moved => StatusCode::BAD_REQUEST,
 			// Also covers private repositories, so their existence isn't revealed
@@ -477,7 +502,7 @@ mod tests {
 		assert_eq!(r.status(), StatusCode::BAD_REQUEST);
 		assert_eq!(
 			block_on(body(r)),
-			"invalid format: expected svg, png, avif, webp or jpeg"
+			"invalid format: expected svg, png, avif or webp"
 		);
 
 		let hosts = ["raw.githubusercontent.com".to_string()];

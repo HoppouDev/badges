@@ -1,4 +1,5 @@
-//! Text shaping and outlining with the Inter fonts used by Devin's Badges
+//! Text shaping and outlining with the embedded fonts: Inter for Devin's
+//! Badges, JetBrains Mono for the pill style
 //!
 //! The original badges are exported from Figma with every glyph converted to
 //! an outline, so we do the same: shape with HarfBuzz (kerning included) and
@@ -6,24 +7,36 @@
 
 use rustybuzz::ttf_parser::{GlyphId, OutlineBuilder};
 use rustybuzz::{script, Direction, Face, ShapePlan, UnicodeBuffer};
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use crate::svg::write_num;
 
 /// Inter 3.19 subsets (Figma's bundled Inter), see assets/fonts
-static MEDIUM: &[u8] = include_bytes!("../assets/fonts/Inter-Medium.ttf");
-static EXTRA_BOLD: &[u8] = include_bytes!("../assets/fonts/Inter-ExtraBold.ttf");
+static MEDIUM: LazyLock<Font> =
+	LazyLock::new(|| Font::load(include_bytes!("../assets/fonts/Inter-Medium.ttf")));
+static EXTRA_BOLD: LazyLock<Font> =
+	LazyLock::new(|| Font::load(include_bytes!("../assets/fonts/Inter-ExtraBold.ttf")));
+/// JetBrains Mono NL 2.304 subsets (no ligatures, so `->` stays two glyphs),
+/// for the pill style
+static MONO_MEDIUM: LazyLock<Font> =
+	LazyLock::new(|| Font::load(include_bytes!("../assets/fonts/JetBrainsMono-Medium.ttf")));
+static MONO_SEMI_BOLD: LazyLock<Font> =
+	LazyLock::new(|| Font::load(include_bytes!("../assets/fonts/JetBrainsMono-SemiBold.ttf")));
 
 /// Rough path bytes per glyph, used to presize the output buffer
 const PATH_BYTES_PER_GLYPH: usize = 320;
 
-/// Inter font weight
+/// An embedded font face
 #[derive(Clone, Copy)]
 pub enum Weight {
 	/// Inter Medium (500)
 	Medium,
 	/// Inter ExtraBold (800)
 	ExtraBold,
+	/// JetBrains Mono Medium (500)
+	MonoMedium,
+	/// JetBrains Mono SemiBold (600)
+	MonoSemiBold,
 }
 
 /// A face plus its cached Latin left-to-right shaping plan
@@ -32,14 +45,8 @@ struct Font {
 	plan: ShapePlan,
 }
 
-fn font(weight: Weight) -> &'static Font {
-	static M: OnceLock<Font> = OnceLock::new();
-	static E: OnceLock<Font> = OnceLock::new();
-	let (cell, data) = match weight {
-		Weight::Medium => (&M, MEDIUM),
-		Weight::ExtraBold => (&E, EXTRA_BOLD),
-	};
-	cell.get_or_init(|| {
+impl Font {
+	fn load(data: &'static [u8]) -> Self {
 		let face = Face::from_slice(data, 0).expect("embedded font is valid");
 		let plan = ShapePlan::new(
 			&face,
@@ -49,7 +56,23 @@ fn font(weight: Weight) -> &'static Font {
 			&[],
 		);
 		Font { face, plan }
-	})
+	}
+}
+
+fn font(weight: Weight) -> &'static Font {
+	match weight {
+		Weight::Medium => &MEDIUM,
+		Weight::ExtraBold => &EXTRA_BOLD,
+		Weight::MonoMedium => &MONO_MEDIUM,
+		Weight::MonoSemiBold => &MONO_SEMI_BOLD,
+	}
+}
+
+/// Cap height in px at `size`, for centring text vertically
+pub fn cap_height(weight: Weight, size: f64) -> f64 {
+	let face = &font(weight).face;
+	let cap = face.capital_height().unwrap_or(face.ascender());
+	f64::from(cap) * size / f64::from(face.units_per_em())
 }
 
 /// A character the embedded font subset cannot draw

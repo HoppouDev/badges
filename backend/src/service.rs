@@ -118,8 +118,8 @@ fn error_response(e: ApiError) -> Response {
 
 #[worker::send]
 async fn badge(State(state): State<AppState>, Query(params): Query<Params>) -> Response {
-	// Reject a bad format before spending an icon fetch on it
-	if let Err(e) = params.format() {
+	// Reject a bad format or look before spending an icon fetch on it
+	if let Err(e) = params.format().and(params.look()) {
 		return error_response(e.into());
 	}
 	let icon = match params.icon_source(&state.icon_hosts) {
@@ -159,7 +159,8 @@ async fn ci_badge(
 	}
 }
 
-/// Validate everything first so bad requests never spend GitHub quota
+/// Validate everything first so bad requests never spend GitHub quota; a
+/// forced `state` skips GitHub altogether
 async fn ci_state(
 	state: &AppState,
 	origin: Option<&str>,
@@ -172,6 +173,9 @@ async fn ci_state(
 	let (branch, event) = (params.branch()?, params.event()?);
 	params.format()?;
 	ci::spec(CiState::Unknown, params, None)?;
+	if let Some(forced) = params.state()? {
+		return Ok(forced);
+	}
 	let token = state
 		.github_token
 		.as_deref()

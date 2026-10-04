@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="{{ width }}" height="{{ height }}" fill="none" viewBox="0 0 {{ width }} {{ height }}" role="img" aria-label="{{ alt }}">
+  <title>{{ alt }}</title>
+  {%- if let Some(css) = css %}
+  <style>{{ css|safe }}</style>
+  {%- endif %}
+  <defs>
+    <linearGradient id="{{ uid }}-paint" x1="0" x2="{{ width }}" y1="0" y2="0" gradientUnits="userSpaceOnUse">
+      <stop class="{{ uid }}-s0" stop-color="{{ paint.from }}" />
+      <stop class="{{ uid }}-s1" offset="1" stop-color="{{ paint.to }}" />
+    </linearGradient>
+    <!-- The whole badge in one colour; its opacities shade the gradient -->
+    <mask id="{{ uid }}-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="{{ width }}" height="{{ height }}">
+      <g fill="#fff" stroke="#fff">
+        <!-- A faint tint of the gradient across the whole badge -->
+        <rect class="{{ uid }}-fill" x="{{ outline_inset }}" y="{{ outline_inset }}" width="{{ outline_width }}" height="{{ outline_height }}" rx="{{ outline_radius }}" stroke="none" fill-opacity="{{ paint.fill_opacity }}" />
+        <rect x="{{ outline_inset }}" y="{{ outline_inset }}" width="{{ outline_width }}" height="{{ outline_height }}" rx="{{ outline_radius }}" fill="none" stroke-width="{{ border }}" />
+        {%- if let Some(c) = chip %}
+        <rect class="{{ uid }}-chip" x="{{ c.x }}" y="{{ c.y }}" width="{{ c.width }}" height="{{ c.height }}" rx="{{ c.radius }}" stroke="none" fill-opacity="{{ paint.chip_opacity }}" />
+        {%- endif %}
+        {%- if let Some(m) = mark %}
+        {%- if m.mark == Mark::Dot %}
+        <circle cx="{{ m.x }}" cy="{{ m.y }}" r="{{ m.halo }}" stroke="none" fill-opacity=".25" />
+        <circle cx="{{ m.x }}" cy="{{ m.y }}" r="{{ m.core }}" stroke="none" />
+        {%- endif %}
+        {%- if let Some(d) = m.icon %}
+        <!-- CSS turns the spinner's group; still, it's the plain icon -->
+        <g{% if m.mark == Mark::Spin %} class="{{ uid }}-spin"{% endif %}>
+          <svg x="{{ m.box_x }}" y="{{ m.box_y }}" width="{{ m.size }}" height="{{ m.size }}" viewBox="0 0 24 24">
+            <path fill="none" stroke-width="{{ m.stroke_width }}" stroke-linecap="round" stroke-linejoin="round" d="{{ d }}" />
+          </svg>
+        </g>
+        {%- endif %}
+        {%- endif %}
+        {%- if let Some(Icon::Fill(d)) = icon %}
+        <svg x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" viewBox="0 0 24 24">
+          <path stroke="none" d="{{ d }}" />
+        </svg>
+        {%- else if let Some(Icon::Stroke(d)) = icon %}
+        <svg x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" viewBox="0 0 24 24">
+          <path fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="{{ d }}" />
+        </svg>
+        {%- endif %}
+        {%- if let Some(d) = title_path %}
+        <path stroke="none" d="{{ d }}" />
+        {%- endif %}
+        <path stroke="none" d="{{ label_path }}" />
+      </g>
+    </mask>
+  </defs>
+  {%- if let Some(bg) = paint.bg %}
+  <rect x="{{ outline_inset }}" y="{{ outline_inset }}" width="{{ outline_width }}" height="{{ outline_height }}" rx="{{ outline_radius }}" fill="{{ bg }}" />
+  {%- endif %}
+  <rect width="{{ width }}" height="{{ height }}" fill="url(#{{ uid }}-paint)" mask="url(#{{ uid }}-mask)" />
+  {%- if let Some(Icon::Image(uri)) = icon %}
+  <!-- Image icons keep their own colours -->
+  <image x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" preserveAspectRatio="xMidYMid meet" href="{{ uri }}" />
+  {%- endif %}
+</svg>

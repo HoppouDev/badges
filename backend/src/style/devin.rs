@@ -1,14 +1,15 @@
-//! Badge layout for Devin's Badges' cozy and compact styles, mirroring their
-//! Figma auto-layout
+//! The Devin's Badges design (`style=devin`), mirroring their Figma
+//! auto-layout in cozy and compact sizes
 //!
-//! All geometry lives in [`Geometry`]; the template only receives computed
-//! values
+//! All Devin geometry lives in [`Geometry`]; the template only receives
+//! computed values
 
 use askama::Template;
-use std::hash::{DefaultHasher, Hash, Hasher};
 
+use super::Size;
 use crate::color::{self, Rgb};
-use crate::icon::{Icon, IconError};
+use crate::icon::Icon;
+use crate::spec::{BadgeError, BadgeSpec, ColorOptions, DEFAULT_ACCENT};
 use crate::svg::{num, round3};
 use crate::text::{self, Line, UnsupportedChar, Weight};
 
@@ -99,84 +100,16 @@ pub const COMPACT: Geometry = Geometry {
 	text_box_single: (9.5, 21.0),
 };
 
-/// Devin's Badges style
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
-pub enum Style {
-	#[default]
-	Cozy,
-	Compact,
-}
-
-impl Style {
-	pub const NAMES: &[&str] = &["cozy", "compact"];
-
-	/// Parse a `style` parameter; unset or empty is cozy
-	pub fn parse(value: Option<&str>) -> Result<Self, BadgeError> {
-		match value.map(str::trim) {
-			None | Some("") => Ok(Self::Cozy),
-			Some(v) if v.eq_ignore_ascii_case("cozy") => Ok(Self::Cozy),
-			Some(v) if v.eq_ignore_ascii_case("compact") => Ok(Self::Compact),
-			Some(_) => Err(BadgeError::InvalidStyle),
-		}
-	}
-
-	pub fn name(self) -> &'static str {
-		match self {
-			Self::Cozy => "cozy",
-			Self::Compact => "compact",
-		}
-	}
-
-	pub fn geometry(self) -> &'static Geometry {
-		match self {
-			Self::Cozy => &COZY,
-			Self::Compact => &COMPACT,
-		}
+/// The style's dimensions at `size`
+fn geometry(size: Size) -> &'static Geometry {
+	match size {
+		Size::Cozy => &COZY,
+		Size::Compact => &COMPACT,
 	}
 }
 
-pub const MAX_TEXT_CHARS: usize = 64;
-pub const DEFAULT_ACCENT: Rgb = Rgb(0xf1, 0xf1, 0xf1);
+/// Title colour when `titleColor` is unset
 pub const DEFAULT_TITLE: Rgb = Rgb(0xe8, 0xe8, 0xe8);
-
-#[derive(Debug, thiserror::Error)]
-pub enum BadgeError {
-	#[error("label is required")]
-	MissingLabel,
-	#[error("{0} is longer than {max} characters", max = MAX_TEXT_CHARS)]
-	TooLong(&'static str),
-	#[error("invalid {0}: expected a CSS colour such as cd6699")]
-	InvalidColor(&'static str),
-	#[error("invalid style: expected cozy or compact")]
-	InvalidStyle,
-	#[error("invalid format: expected svg, png, avif, webp or jpeg")]
-	InvalidFormat,
-	#[error("{field} contains a character the font does not support: {ch:?}")]
-	Unsupported { field: &'static str, ch: char },
-	#[error(transparent)]
-	Icon(#[from] IconError),
-	#[error("failed to render badge")]
-	Render(#[from] askama::Error),
-	/// Detail is for logs only and never shown to clients
-	#[error("failed to encode badge")]
-	Encode(String),
-}
-
-/// Colour overrides; anything unset falls back to the defaults
-#[derive(Debug, Default, Clone)]
-pub struct ColorOptions {
-	/// Label and icon colour
-	pub accent: Option<Rgb>,
-	/// Bottom of an optional vertical label gradient
-	pub accent_to: Option<Rgb>,
-	pub title: Option<Rgb>,
-	/// Simple Icons fill, defaults to the accent
-	pub icon: Option<Rgb>,
-	/// Background top; alone it gives a flat background
-	pub bg_top: Option<Rgb>,
-	/// Background bottom; without `bg_top` the top is derived from the accent
-	pub bg_bottom: Option<Rgb>,
-}
 
 #[derive(Debug, Hash)]
 struct Palette {
@@ -188,65 +121,24 @@ struct Palette {
 	bg_bottom: Rgb,
 }
 
-impl ColorOptions {
-	fn resolve(&self) -> Palette {
-		let label = self.accent.unwrap_or(DEFAULT_ACCENT);
-		let (bg_top, bg_bottom) = match (self.bg_top, self.bg_bottom) {
-			(Some(top), bottom) => (top, bottom.unwrap_or(top)),
-			(None, bottom) => {
-				let (top, derived_bottom) = color::background(label);
-				(top, bottom.unwrap_or(derived_bottom))
-			}
-		};
-		Palette {
-			label,
-			label_to: self.accent_to,
-			title: self.title.unwrap_or(DEFAULT_TITLE),
-			icon: self.icon.unwrap_or(label),
-			bg_top,
-			bg_bottom,
+/// Fill in the colours `c` leaves unset
+fn palette(c: &ColorOptions) -> Palette {
+	let label = c.accent.unwrap_or(DEFAULT_ACCENT);
+	let (bg_top, bg_bottom) = match (c.bg_top, c.bg_bottom) {
+		(Some(top), bottom) => (top, bottom.unwrap_or(top)),
+		(None, bottom) => {
+			let (top, derived_bottom) = color::background(label);
+			(top, bottom.unwrap_or(derived_bottom))
 		}
+	};
+	Palette {
+		label,
+		label_to: c.accent_to,
+		title: c.title.unwrap_or(DEFAULT_TITLE),
+		icon: c.icon.unwrap_or(label),
+		bg_top,
+		bg_bottom,
 	}
-}
-
-/// A validated badge ready to render
-#[derive(Debug, Clone)]
-pub struct BadgeSpec {
-	pub title: Option<String>,
-	pub label: String,
-	pub colors: ColorOptions,
-	pub icon: Option<Icon>,
-	pub style: Style,
-}
-
-impl BadgeSpec {
-	/// Trim and validate the text lines; an empty title means a label-only
-	/// badge
-	pub fn new(title: Option<&str>, label: &str) -> Result<Self, BadgeError> {
-		let label = label.trim();
-		if label.is_empty() {
-			return Err(BadgeError::MissingLabel);
-		}
-		check_len(label, "label")?;
-		let title = title.map(str::trim).filter(|t| !t.is_empty());
-		if let Some(t) = title {
-			check_len(t, "title")?;
-		}
-		Ok(Self {
-			title: title.map(Into::into),
-			label: label.into(),
-			colors: ColorOptions::default(),
-			icon: None,
-			style: Style::default(),
-		})
-	}
-}
-
-fn check_len(s: &str, field: &'static str) -> Result<(), BadgeError> {
-	if s.chars().count() > MAX_TEXT_CHARS {
-		return Err(BadgeError::TooLong(field));
-	}
-	Ok(())
 }
 
 /// Figma sizes text frames in whole pixels; round to its precision first so
@@ -268,7 +160,7 @@ struct Layout {
 }
 
 fn layout(spec: &BadgeSpec) -> Result<Layout, BadgeError> {
-	let g = spec.style.geometry();
+	let g = geometry(spec.look.size);
 	let text_x = if spec.icon.is_some() {
 		g.padding + g.icon_size + g.icon_gap
 	} else {
@@ -363,7 +255,7 @@ struct LabelGradient {
 }
 
 #[derive(Template)]
-#[template(path = "badge.svg")]
+#[template(path = "devin.svg")]
 struct BadgeSvg<'a> {
 	/// Per-badge id prefix so inlined badges don't share gradients or filters
 	uid: &'a str,
@@ -383,23 +275,13 @@ struct BadgeSvg<'a> {
 	label_gradient: Option<LabelGradient>,
 }
 
-fn uid(spec: &BadgeSpec, palette: &Palette) -> String {
-	let mut h = DefaultHasher::new();
-	(&spec.title, &spec.label, &spec.icon, spec.style, palette).hash(&mut h);
-	// ids must start with a letter
-	format!("b{:08x}", h.finish() as u32)
-}
-
-/// Render a badge SVG in the spec's style
-pub fn render(spec: &BadgeSpec) -> Result<String, BadgeError> {
-	let g = spec.style.geometry();
-	let palette = spec.colors.resolve();
+/// Render a badge SVG in the Devin style
+pub(super) fn render(spec: &BadgeSpec) -> Result<String, BadgeError> {
+	let g = geometry(spec.look.size);
+	let palette = palette(&spec.colors);
 	let layout = layout(spec)?;
-	let uid = uid(spec, &palette);
-	let alt = match &spec.title {
-		Some(t) => format!("{t} {}", spec.label),
-		None => spec.label.clone(),
-	};
+	let uid = super::uid(spec, &palette);
+	let alt = spec.alt();
 	let label_gradient = palette.label_to.map(|to| LabelGradient {
 		x: num(layout.label_x + layout.label.width / 2.0),
 		y1: num(layout.label_baseline - LABEL_GRADIENT_ABOVE),
@@ -455,16 +337,17 @@ pub fn render(spec: &BadgeSpec) -> Result<String, BadgeError> {
 mod tests {
 	use super::*;
 	use crate::icon::PathData;
+	use crate::style::Theme;
 	use roxmltree::{Document, Node};
 
-	const REFERENCE: &str = include_str!("../tests/fixtures/sass_reference.svg");
+	const REFERENCE: &str = include_str!("../../tests/fixtures/sass_reference.svg");
 
 	fn spec(title: &str, label: &str) -> BadgeSpec {
 		BadgeSpec::new(Some(title), label).unwrap()
 	}
 
 	fn square() -> Icon {
-		Icon::Path(PathData::new("M0 0h24v24H0z").unwrap())
+		Icon::Fill(PathData::new("M0 0h24v24H0z").unwrap())
 	}
 
 	/// Element whose id is `suffix` or ends with `-suffix`
@@ -529,21 +412,21 @@ mod tests {
 		] {
 			let mut s = spec(title, label);
 			s.icon = Some(square());
-			s.style = Style::Compact;
+			s.look.size = Size::Compact;
 			assert_eq!(width(&render(&s).unwrap()), expected, "{title} {label}");
 		}
 		let mut single = BadgeSpec::new(None, "Buy Us a Coffee").unwrap();
 		single.icon = Some(square());
-		single.style = Style::Compact;
+		single.look.size = Size::Compact;
 		assert_eq!(width(&render(&single).unwrap()), "183");
 	}
 
 	#[test]
 	fn compact_frame_matches_github_reference() {
-		const REFERENCE: &str = include_str!("../tests/fixtures/github_compact_reference.svg");
+		const REFERENCE: &str = include_str!("../../tests/fixtures/github_compact_reference.svg");
 		let mut s = spec("Available on", "GitHub");
 		s.icon = Some(square());
-		s.style = Style::Compact;
+		s.look.size = Size::Compact;
 		s.colors = ColorOptions {
 			accent: Rgb::parse("fff"),
 			bg_top: Rgb::parse("181f29"),
@@ -603,21 +486,11 @@ mod tests {
 	}
 
 	#[test]
-	fn style_parsing() {
-		assert_eq!(Style::parse(None).unwrap(), Style::Cozy);
-		assert_eq!(Style::parse(Some(" ")).unwrap(), Style::Cozy);
-		assert_eq!(Style::parse(Some("COMPACT")).unwrap(), Style::Compact);
-		assert!(matches!(
-			Style::parse(Some("wide")),
-			Err(BadgeError::InvalidStyle)
-		));
-		for name in Style::NAMES {
-			assert_eq!(Style::parse(Some(name)).unwrap().name(), *name);
-		}
-		// Same text, different styles, never share ids
+	fn sizes_and_themes() {
+		// Same text, different sizes, never share ids
 		let mut a = spec("Built with", "Sass");
 		let cozy = render(&a).unwrap();
-		a.style = Style::Compact;
+		a.look.size = Size::Compact;
 		let compact = render(&a).unwrap();
 		let uid = |s: &str| {
 			s[s.find("url(#").unwrap() + 5..]
@@ -629,6 +502,11 @@ mod tests {
 		assert_ne!(uid(&cozy), uid(&compact));
 		// 8 padding + 76 title + 4 gap + 41 label + 8 padding
 		assert_eq!(width(&compact), "137");
+		// The theme only affects styles that have one
+		a.look.theme = Theme::Light;
+		let light = render(&a).unwrap();
+		assert_eq!(width(&light), "137");
+		assert!(light.contains("stop-color=\"#303030\""));
 	}
 
 	#[test]
@@ -715,21 +593,7 @@ mod tests {
 	}
 
 	#[test]
-	fn validates_text() {
-		assert!(matches!(
-			BadgeSpec::new(Some("x"), "  "),
-			Err(BadgeError::MissingLabel)
-		));
-		assert!(BadgeSpec::new(None, &"a".repeat(64)).is_ok());
-		assert!(BadgeSpec::new(None, &"\u{e9}".repeat(64)).is_ok());
-		assert!(matches!(
-			BadgeSpec::new(None, &"a".repeat(65)),
-			Err(BadgeError::TooLong("label"))
-		));
-		assert!(matches!(
-			BadgeSpec::new(Some(&"a".repeat(65)), "x"),
-			Err(BadgeError::TooLong("title"))
-		));
+	fn unsupported_characters() {
 		assert!(matches!(
 			render(&BadgeSpec::new(None, "hi \u{1f600}").unwrap()),
 			Err(BadgeError::Unsupported {
@@ -792,7 +656,7 @@ mod tests {
 	#[test]
 	fn background_fallbacks() {
 		let stops = |c: ColorOptions| {
-			let p = c.resolve();
+			let p = palette(&c);
 			(p.bg_top, p.bg_bottom)
 		};
 		let grey = color::background(DEFAULT_ACCENT);

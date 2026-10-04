@@ -11,8 +11,8 @@ pub const MAX_ICON_BYTES: usize = 64 * 1024;
 /// data can declare far more pixels than a Worker has memory
 pub const MAX_ICON_SIDE: u32 = 2048;
 
-/// Longest accepted Simple Icons slug
-const MAX_SLUG_LEN: usize = 64;
+/// Longest accepted Simple Icons slug or Lucide name
+const MAX_NAME_LEN: usize = 64;
 
 /// Hosts allowed for `icon=https://...` when `ICON_HOSTS` isn't configured
 pub const DEFAULT_ICON_HOSTS: &[&str] = &[
@@ -25,7 +25,7 @@ pub const DEFAULT_ICON_HOSTS: &[&str] = &[
 
 #[derive(Debug, PartialEq, thiserror::Error)]
 pub enum IconError {
-	#[error("invalid icon: use a Simple Icons slug or an https image url")]
+	#[error("invalid icon: use simple:<slug>, lucide:<name> or an https image url")]
 	InvalidSpec,
 	#[error("icon url must use https")]
 	NotHttps,
@@ -48,17 +48,23 @@ pub enum IconError {
 	Upstream(String),
 }
 
-/// Validated SVG path data (Simple Icons use a 24x24 viewBox)
+/// Validated SVG path data in a 24x24 viewBox, as Simple Icons and Lucide use
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PathData(String);
 
 impl PathData {
 	/// Accept only well-formed path data made of attribute-safe characters
+	/// that starts with a moveto, as SVG requires
 	pub fn new(d: &str) -> Option<Self> {
 		let safe = d
 			.bytes()
 			.all(|b| b.is_ascii_alphanumeric() || b" .,-+".contains(&b));
-		let parses = !d.trim().is_empty() && svgtypes::PathParser::from(d).all(|seg| seg.is_ok());
+		let mut segments = svgtypes::PathParser::from(d);
+		let starts = matches!(
+			segments.next(),
+			Some(Ok(svgtypes::PathSegment::MoveTo { .. }))
+		);
+		let parses = starts && segments.all(|seg| seg.is_ok());
 		(safe && parses).then(|| Self(d.to_string()))
 	}
 }
@@ -161,8 +167,10 @@ impl fmt::Display for DataUri {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Icon {
-	/// Single-path icon tinted with the icon colour
-	Path(PathData),
+	/// Filled single-path icon (Simple Icons) tinted with the icon colour
+	Fill(PathData),
+	/// Line icon (Lucide) stroked 2 units wide with round caps and joins
+	Stroke(PathData),
 	/// Raster image
 	Image(DataUri),
 }
@@ -170,20 +178,27 @@ pub enum Icon {
 /// Where an icon comes from, validated but not yet fetched
 #[derive(Debug, PartialEq)]
 pub enum IconSource {
-	/// Simple Icons slug (https://simpleicons.org)
-	SimpleIcon(String),
+	/// Simple Icons slug (https://simpleicons.org), from `simple:<slug>`
+	Simple(String),
+	/// Lucide icon name (https://lucide.dev), from `lucide:<name>`
+	Lucide(String),
 	/// Image on an allowed https host
 	Remote(Url),
 }
 
 impl IconSource {
-	/// Parse an `icon` query value; absolute URLs must be https on an allowed
-	/// host
+	/// Parse an `icon` query value: `simple:<slug>`, `lucide:<name>`, or an
+	/// absolute https URL on an allowed host
 	pub fn parse(spec: &str, allowed_hosts: &[String]) -> Result<Self, IconError> {
 		let spec = spec.trim();
-		match Url::parse(spec) {
-			Ok(url) => remote(url, allowed_hosts),
-			Err(_) => simple_icon_slug(spec).map(Self::SimpleIcon),
+		let (prefix, name) = spec.split_once(':').ok_or(IconError::InvalidSpec)?;
+		match prefix.to_ascii_lowercase().as_str() {
+			"simple" => simple_icon_slug(name).map(Self::Simple),
+			"lucide" => lucide_name(name).map(Self::Lucide),
+			_ if name.starts_with("//") => Url::parse(spec)
+				.map_err(|_| IconError::InvalidSpec)
+				.and_then(|url| remote(url, allowed_hosts)),
+			_ => Err(IconError::InvalidSpec),
 		}
 	}
 }
@@ -204,13 +219,26 @@ fn remote(url: Url, allowed_hosts: &[String]) -> Result<IconSource, IconError> {
 	Ok(IconSource::Remote(url))
 }
 
-/// Simple Icons slugs are lowercase ASCII alphanumerics
-fn simple_icon_slug(spec: &str) -> Result<String, IconError> {
-	let valid = !spec.is_empty()
-		&& spec.len() <= MAX_SLUG_LEN
-		&& spec.bytes().all(|b| b.is_ascii_alphanumeric());
+/// Simple Icons slugs are ASCII alphanumerics, lowercased here
+fn simple_icon_slug(name: &str) -> Result<String, IconError> {
+	let valid = !name.is_empty()
+		&& name.len() <= MAX_NAME_LEN
+		&& name.bytes().all(|b| b.is_ascii_alphanumeric());
 	valid
-		.then(|| spec.to_ascii_lowercase())
+		.then(|| name.to_ascii_lowercase())
+		.ok_or(IconError::InvalidSpec)
+}
+
+/// Lucide names are ASCII alphanumeric words joined by single hyphens,
+/// lowercased here
+fn lucide_name(name: &str) -> Result<String, IconError> {
+	let valid = !name.is_empty()
+		&& name.len() <= MAX_NAME_LEN
+		&& name
+			.split('-')
+			.all(|word| !word.is_empty() && word.bytes().all(|b| b.is_ascii_alphanumeric()));
+	valid
+		.then(|| name.to_ascii_lowercase())
 		.ok_or(IconError::InvalidSpec)
 }
 
@@ -222,7 +250,120 @@ pub fn simple_icon_from_svg(svg: &str) -> Option<Icon> {
 	if paths.next().is_some() {
 		return None;
 	}
-	PathData::new(path.attribute("d")?).map(Icon::Path)
+	PathData::new(path.attribute("d")?).map(Icon::Fill)
+}
+
+/// Build a Lucide icon from its SVG by turning every shape into path data,
+/// so the whole icon is one stroked path. Lucide draws everything as a 2-unit
+/// stroke; its few filled dots are tiny circles that stroke to the same disc
+pub fn lucide_icon_from_svg(svg: &str) -> Option<Icon> {
+	let doc = roxmltree::Document::parse(svg).ok()?;
+	let mut d = String::new();
+	for node in doc.root_element().children().filter(|n| n.is_element()) {
+		let part = shape_path(node)?;
+		if !d.is_empty() {
+			// A path's leading `m` is absolute only at the start of a path;
+			// appended, it would move relative to the previous shape's end.
+			// A bare move to the origin first keeps it where it belongs and
+			// draws nothing
+			d.push_str(if part.trim_start().starts_with('m') {
+				" M0 0 "
+			} else {
+				" "
+			});
+		}
+		d.push_str(&part);
+	}
+	PathData::new(&d).map(Icon::Stroke)
+}
+
+/// Path data for one SVG shape element; `None` for anything else, or for a
+/// negative size or radius, which SVG treats as an error
+fn shape_path(node: roxmltree::Node) -> Option<String> {
+	use crate::svg::num;
+	let attr = |name| -> Option<f64> {
+		match node.attribute(name) {
+			Some(v) => v.trim().parse().ok(),
+			None => Some(0.0),
+		}
+	};
+	let size = |name| attr(name).filter(|v: &f64| *v >= 0.0);
+	let ellipse = |cx: f64, cy: f64, rx: f64, ry: f64| {
+		// Two half arcs, since one arc can't draw a full turn
+		format!(
+			"M{} {}a{} {} 0 1 0 {} 0a{} {} 0 1 0 {} 0",
+			num(cx - rx),
+			num(cy),
+			num(rx),
+			num(ry),
+			num(2.0 * rx),
+			num(rx),
+			num(ry),
+			num(-2.0 * rx)
+		)
+	};
+	let points = |close: bool| {
+		let mut d = String::new();
+		for (i, (x, y)) in svgtypes::PointsParser::from(node.attribute("points")?).enumerate() {
+			d.push_str(if i == 0 { "M" } else { "L" });
+			d.push_str(&format!("{} {}", num(x), num(y)));
+		}
+		if close {
+			d.push('Z');
+		}
+		(!d.is_empty()).then_some(d)
+	};
+	match node.tag_name().name() {
+		"path" => node.attribute("d").map(str::to_string),
+		"circle" => {
+			let r = size("r")?;
+			Some(ellipse(attr("cx")?, attr("cy")?, r, r))
+		}
+		"ellipse" => Some(ellipse(attr("cx")?, attr("cy")?, size("rx")?, size("ry")?)),
+		"line" => Some(format!(
+			"M{} {}L{} {}",
+			num(attr("x1")?),
+			num(attr("y1")?),
+			num(attr("x2")?),
+			num(attr("y2")?)
+		)),
+		"polyline" => points(false),
+		"polygon" => points(true),
+		"rect" => {
+			let (x, y, w, h) = (attr("x")?, attr("y")?, size("width")?, size("height")?);
+			// A missing radius takes the other one's value, and neither may
+			// pass the middle of its side
+			let (rx, ry) = match (node.attribute("rx"), node.attribute("ry")) {
+				(None, None) => (0.0, 0.0),
+				(Some(_), None) => (size("rx")?, size("rx")?),
+				(None, Some(_)) => (size("ry")?, size("ry")?),
+				(Some(_), Some(_)) => (size("rx")?, size("ry")?),
+			};
+			let (rx, ry) = (rx.min(w / 2.0), ry.min(h / 2.0));
+			let (iw, ih) = (w - 2.0 * rx, h - 2.0 * ry);
+			let corner = |dx: f64, dy: f64| {
+				format!("a{} {} 0 0 1 {} {}", num(rx), num(ry), num(dx), num(dy))
+			};
+			Some(if rx > 0.0 && ry > 0.0 {
+				format!(
+					"M{} {}h{}{}v{}{}h{}{}v{}{}Z",
+					num(x + rx),
+					num(y),
+					num(iw),
+					corner(rx, ry),
+					num(ih),
+					corner(-rx, ry),
+					num(-iw),
+					corner(-rx, -ry),
+					num(-ih),
+					corner(rx, -ry)
+				)
+			} else {
+				format!("M{} {}h{}v{}h{}Z", num(x), num(y), num(w), num(h), num(-w))
+			})
+		}
+		_ => None,
+	}
 }
 
 /// Inline a remote image whose declared and sniffed types agree and whose
@@ -281,7 +422,7 @@ mod tests {
 		let svg = r#"<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>X</title><path d="M1 2h3v4z"/></svg>"#;
 		assert_eq!(
 			simple_icon_from_svg(svg),
-			PathData::new("M1 2h3v4z").map(Icon::Path)
+			PathData::new("M1 2h3v4z").map(Icon::Fill)
 		);
 		// d is read from the path element itself, whatever its attribute order
 		// or quoting
@@ -310,16 +451,114 @@ mod tests {
 		assert!(PathData::new("script").is_none());
 		assert!(PathData::new("").is_none());
 		assert!(PathData::new("M0 0\"/>").is_none());
+		// SVG paths must open with a moveto
+		assert!(PathData::new("l5 5").is_none());
+		assert!(PathData::new(" m1 1l5 5").is_some());
+	}
+
+	#[test]
+	fn lucide_shapes_become_one_stroked_path() {
+		// The shapes Lucide uses, each converted to equivalent path data
+		let svg = r#"<!-- @license -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+  <path d="M20 6 9 17l-5-5" />
+  <circle cx="12" cy="12" r="10" />
+  <ellipse cx="12" cy="5" rx="9" ry="3" />
+  <line x1="12" x2="12.01" y1="16" y2="16" />
+  <polyline points="15,9 18,9 18,11" />
+  <polygon points="12 2 19 21 5 21" />
+  <rect width="18" height="18" x="3" y="3" rx="2" />
+  <rect x="1" y="2" width="4" height="5" />
+  <path d="m16 9-5.5 5.5L8 12" />
+</svg>"#;
+		let Some(Icon::Stroke(d)) = lucide_icon_from_svg(svg) else {
+			panic!("not a stroke icon");
+		};
+		assert_eq!(
+			d.to_string(),
+			[
+				"M20 6 9 17l-5-5",
+				"M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0",
+				"M3 5a9 3 0 1 0 18 0a9 3 0 1 0 -18 0",
+				"M12 16L12.01 16",
+				"M15 9L18 9L18 11",
+				"M12 2L19 21L5 21Z",
+				"M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2Z",
+				"M1 2h4v5h-4Z",
+				// The appended relative move still starts at (16, 9)
+				"M0 0 m16 9-5.5 5.5L8 12",
+			]
+			.join(" ")
+		);
+		let starts: Vec<_> = svgtypes::SimplifyingPathParser::from(d.to_string().as_str())
+			.filter_map(|s| match s.unwrap() {
+				svgtypes::SimplePathSegment::MoveTo { x, y } => Some((x, y)),
+				_ => None,
+			})
+			.collect();
+		assert_eq!(starts.last(), Some(&(16.0, 9.0)));
+		// Radii are clamped to half the side, and one radius sets both
+		let pill = lucide_icon_from_svg(r#"<svg><rect width="4" height="2" ry="5"/></svg>"#);
+		assert_eq!(
+			pill.map(|i| format!("{i:?}")),
+			Some(format!(
+				"{:?}",
+				Icon::Stroke(
+					PathData::new(
+						"M2 0h0a2 1 0 0 1 2 1v0a2 1 0 0 1 -2 1h0a2 1 0 0 1 -2 -1v0a2 1 0 0 1 2 -1Z"
+					)
+					.unwrap()
+				)
+			))
+		);
+		// Anything that isn't a known shape, or doesn't parse, is rejected
+		for bad in [
+			"<svg/>",
+			"<svg><g/></svg>",
+			"<svg><text>x</text></svg>",
+			r#"<svg><circle cx="a" r="1"/></svg>"#,
+			r#"<svg><polyline points=""/></svg>"#,
+			// Negative sizes and radii are errors in SVG
+			r#"<svg><circle r="-1"/></svg>"#,
+			r#"<svg><ellipse rx="1" ry="-1"/></svg>"#,
+			r#"<svg><rect width="4" height="4" rx="-1"/></svg>"#,
+			r#"<svg><rect width="-4" height="4"/></svg>"#,
+			r#"<svg><path d="M1&quot;"/></svg>"#,
+			"not xml",
+		] {
+			assert_eq!(lucide_icon_from_svg(bad), None, "{bad}");
+		}
 	}
 
 	#[test]
 	fn icon_source_parsing() {
 		let h = hosts();
 		assert_eq!(
-			IconSource::parse(" Sass ", &h),
-			Ok(IconSource::SimpleIcon("sass".into()))
+			IconSource::parse(" Simple:Sass ", &h),
+			Ok(IconSource::Simple("sass".into()))
 		);
-		for bad in ["../x", "a b", "a-b", "", &"a".repeat(65)] {
+		assert_eq!(
+			IconSource::parse("LUCIDE:Circle-Check-2", &h),
+			Ok(IconSource::Lucide("circle-check-2".into()))
+		);
+		// A prefix is required: bare slugs are no longer accepted
+		for bad in [
+			"sass",
+			"",
+			"simple:",
+			"simple:../x",
+			"simple:a b",
+			"simple:a-b",
+			&format!("simple:{}", "a".repeat(65)),
+			"lucide:",
+			"lucide:-x",
+			"lucide:x-",
+			"lucide:a--b",
+			"lucide:a_b",
+			"lucide:../x",
+			"sass:foo",
+			"https:x.png",
+		] {
 			assert_eq!(
 				IconSource::parse(bad, &h),
 				Err(IconError::InvalidSpec),
@@ -332,7 +571,6 @@ mod tests {
 			IconSource::parse("http://raw.githubusercontent.com/x.png", &h),
 			Err(IconError::NotHttps)
 		);
-		assert_eq!(IconSource::parse("sass:foo", &h), Err(IconError::NotHttps));
 		for bad in [
 			"https://evil.example/x.png",
 			"https://127.0.0.1/x.png",

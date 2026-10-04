@@ -9,10 +9,11 @@ pub mod github;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
-use crate::badge::{BadgeError, BadgeSpec, Style};
 use crate::color::Rgb;
 use crate::icon::{self, Icon};
 use crate::raster::Format;
+use crate::spec::{BadgeError, BadgeSpec, Mark};
+use crate::style::{Choice, Look, Size, Style};
 use github::{Conclusion, Run, RunStatus, Workflow};
 
 pub const ROUTE: &str = "/ci/{owner}/{repo}/{workflow}";
@@ -31,8 +32,14 @@ pub const PARAMS: &[(&str, &str)] = &[
 		"branch to report (default: the repository's default branch)",
 	),
 	("event", "triggering event to report (default push)"),
-	("style", "cozy (default) or compact"),
-	("format", "svg (default), png, avif, webp or jpeg"),
+	("style", "devin (default) or pill"),
+	("size", "cozy (default) or compact"),
+	("theme", "pill colours: auto (default), dark or light"),
+	("format", "svg (default), png, avif or webp"),
+	(
+		"state",
+		"show this state without asking GitHub: passing, failing, running, cancelled, skipped or unknown",
+	),
 ];
 
 /// GitHub's own status colours (Primer dark theme)
@@ -62,10 +69,16 @@ pub enum CiError {
 	InvalidBranch,
 	#[error("invalid event")]
 	InvalidEvent,
-	#[error("invalid style: expected cozy or compact")]
+	#[error("invalid style: expected devin or pill")]
 	InvalidStyle,
-	#[error("invalid format: expected svg, png, avif, webp or jpeg")]
+	#[error("invalid size: expected cozy or compact")]
+	InvalidSize,
+	#[error("invalid theme: expected auto, dark or light")]
+	InvalidTheme,
+	#[error("invalid format: expected svg, png, avif or webp")]
 	InvalidFormat,
+	#[error("invalid state: expected passing, failing, running, cancelled, skipped or unknown")]
+	InvalidState,
 	#[error("GitHub integration is not configured")]
 	NotConfigured,
 	#[error("repository or workflow not found")]
@@ -95,7 +108,11 @@ pub struct CiParams {
 	pub branch: Option<String>,
 	pub event: Option<String>,
 	pub style: Option<String>,
+	pub size: Option<String>,
+	pub theme: Option<String>,
 	pub format: Option<String>,
+	/// Fixed state to show instead of the workflow's, for previews and tests
+	pub state: Option<String>,
 }
 
 impl CiParams {
@@ -118,6 +135,26 @@ impl CiParams {
 
 	pub fn format(&self) -> Result<Format, CiError> {
 		Format::parse(self.format.as_deref()).map_err(|_| CiError::InvalidFormat)
+	}
+
+	pub fn look(&self) -> Result<Look, BadgeError> {
+		Look::parse(
+			self.style.as_deref(),
+			self.size.as_deref(),
+			self.theme.as_deref(),
+		)
+	}
+
+	/// The forced state, if any; blank counts as unset
+	pub fn state(&self) -> Result<Option<CiState>, CiError> {
+		match self.state.as_deref().map(str::trim) {
+			None | Some("") => Ok(None),
+			Some(s) => CiState::ALL
+				.into_iter()
+				.find(|c| c.label().eq_ignore_ascii_case(s))
+				.map(Some)
+				.ok_or(CiError::InvalidState),
+		}
 	}
 }
 
@@ -180,6 +217,17 @@ impl CiState {
 			Self::Cancelled | Self::Skipped | Self::Unknown => NEUTRAL_GREY,
 		}
 	}
+
+	/// Status mark for pill badges: a check on success, a cross on failure, a
+	/// turning refresh icon while running, a still dot otherwise
+	pub fn mark(self) -> Mark {
+		match self {
+			Self::Passing => Mark::Check,
+			Self::Failing => Mark::Cross,
+			Self::Running => Mark::Spin,
+			Self::Cancelled | Self::Skipped | Self::Unknown => Mark::Dot,
+		}
+	}
 }
 
 /// Badge for a workflow state; the title defaults to [`DEFAULT_TITLE`]
@@ -192,7 +240,8 @@ pub fn spec(
 	let mut spec = BadgeSpec::new(Some(title), state.label())?;
 	spec.colors.accent = Some(state.color());
 	spec.icon = icon;
-	spec.style = Style::parse(params.style.as_deref())?;
+	spec.mark = Some(state.mark());
+	spec.look = params.look()?;
 	Ok(spec)
 }
 
@@ -216,17 +265,40 @@ pub fn cache_key(
 		query.append_pair("branch", branch);
 	}
 	query.append_pair("event", params.event()?);
-	// Only non-default styles appear, so style=cozy shares the default key
-	let style = Style::parse(params.style.as_deref()).map_err(|_| CiError::InvalidStyle)?;
-	if style != Style::Cozy {
-		query.append_pair("style", style.name());
-	}
 	let format = params.format()?;
+	// Only choices that change the image appear, so equivalent spellings
+	// (style=cozy, theme=auto on a PNG, any theme on a Devin badge) share one
+	// key. Bad values are rejected rather than dropped, so they can't poison
+	// the default key
+	let look = params
+		.look()
+		.map_err(|e| match e {
+			BadgeError::InvalidSize => CiError::InvalidSize,
+			BadgeError::InvalidTheme => CiError::InvalidTheme,
+			_ => CiError::InvalidStyle,
+		})?
+		.for_format(format);
+	if look.style != Style::default() {
+		query.append_pair("style", look.style.name());
+	}
+	if look.size != Size::default() {
+		query.append_pair("size", look.size.name());
+	}
+	let default_theme = Look::default().for_format(format).theme;
+	if look.style.has_theme() && look.theme != default_theme {
+		query.append_pair("theme", look.theme.name());
+	}
 	if format != Format::Svg {
 		query.append_pair("format", format.name());
 	}
+	// Rendering trims the title, so equal titles share a key; an empty one
+	// still differs from none, since it means a single-line badge rather
+	// than the default title
 	if let Some(title) = &params.title {
-		query.append_pair("title", title);
+		query.append_pair("title", title.trim());
+	}
+	if let Some(state) = params.state()? {
+		query.append_pair("state", state.label());
 	}
 	Ok(format!(
 		"{origin}{ROUTE_PREFIX}{}/{}?{}",
@@ -239,6 +311,7 @@ pub fn cache_key(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::style::Theme;
 
 	fn run(status: RunStatus, conclusion: Option<Conclusion>) -> Run {
 		Run { status, conclusion }
@@ -249,8 +322,7 @@ mod tests {
 			title: title.map(Into::into),
 			branch: branch.map(Into::into),
 			event: event.map(Into::into),
-			style: None,
-			format: None,
+			..CiParams::default()
 		}
 	}
 
@@ -316,16 +388,22 @@ mod tests {
 		assert_eq!(
 			spec(CiState::Passing, &CiParams::default(), None)
 				.unwrap()
-				.style,
-			Style::Cozy
+				.look,
+			Look::default()
 		);
-		let compact = CiParams {
-			style: Some("Compact".into()),
+		let pill = CiParams {
+			style: Some("Pill".into()),
+			size: Some("compact".into()),
+			theme: Some("light".into()),
 			..CiParams::default()
 		};
 		assert_eq!(
-			spec(CiState::Passing, &compact, None).unwrap().style,
-			Style::Compact
+			spec(CiState::Passing, &pill, None).unwrap().look,
+			Look {
+				style: Style::Pill,
+				size: Size::Compact,
+				theme: Theme::Light
+			}
 		);
 		let bad = CiParams {
 			style: Some("wide".into()),
@@ -360,22 +438,61 @@ mod tests {
 			key("o", &params(Some(""), None, None)),
 			key("o", &CiParams::default())
 		);
+		// Rendering trims the title, so the key does too; blank still means a
+		// single-line badge, not the default title
+		assert_eq!(
+			key("o", &params(Some(" Build "), None, None)),
+			key("o", &params(Some("Build"), None, None))
+		);
+		assert_eq!(
+			key("o", &params(Some("  "), None, None)),
+			key("o", &params(Some(""), None, None))
+		);
 		assert_eq!(key("-o", &CiParams::default()), Err(CiError::InvalidOwner));
 		assert_eq!(
 			key("o", &params(None, Some("a b"), None)),
 			Err(CiError::InvalidBranch)
 		);
-		let styled = |s: &str| CiParams {
-			style: Some(s.into()),
+		let looked = |style: Option<&str>, size: Option<&str>, theme: Option<&str>| CiParams {
+			style: style.map(Into::into),
+			size: size.map(Into::into),
+			theme: theme.map(Into::into),
 			..CiParams::default()
 		};
-		assert_eq!(key("o", &styled("cozy")), key("o", &CiParams::default()));
+		let base = key("o", &CiParams::default());
 		assert_eq!(
-			key("o", &styled("COMPACT")),
-			Ok("https://b.dev/ci/o/badges/rust.yml?event=push&style=compact".into())
+			key("o", &looked(Some("devin"), Some("cozy"), Some("auto"))),
+			base
 		);
-		// Rejected rather than dropped, so a bad style can't poison the default key
-		assert_eq!(key("o", &styled("wide")), Err(CiError::InvalidStyle));
+		// The legacy style=compact shares the key of size=compact
+		let compact = Ok("https://b.dev/ci/o/badges/rust.yml?event=push&size=compact".into());
+		assert_eq!(key("o", &looked(Some("COMPACT"), None, None)), compact);
+		assert_eq!(key("o", &looked(None, Some("compact"), None)), compact);
+		assert_eq!(
+			key("o", &looked(Some("pill"), None, Some("light"))),
+			Ok("https://b.dev/ci/o/badges/rust.yml?event=push&style=pill&theme=light".into())
+		);
+		// Raster formats render auto as dark, so both spellings share a key
+		let png = |theme: &str| CiParams {
+			style: Some("pill".into()),
+			theme: Some(theme.into()),
+			format: Some("png".into()),
+			..CiParams::default()
+		};
+		assert_eq!(key("o", &png("auto")), key("o", &png("dark")));
+		// Rejected rather than dropped, so a bad value can't poison the default key
+		assert_eq!(
+			key("o", &looked(Some("wide"), None, None)),
+			Err(CiError::InvalidStyle)
+		);
+		assert_eq!(
+			key("o", &looked(None, Some("huge"), None)),
+			Err(CiError::InvalidSize)
+		);
+		assert_eq!(
+			key("o", &looked(None, None, Some("sepia"))),
+			Err(CiError::InvalidTheme)
+		);
 		let formatted = |f: &str| CiParams {
 			format: Some(f.into()),
 			..CiParams::default()
@@ -386,6 +503,20 @@ mod tests {
 			Ok("https://b.dev/ci/o/badges/rust.yml?event=push&format=avif".into())
 		);
 		assert_eq!(key("o", &formatted("bmp")), Err(CiError::InvalidFormat));
+		// A forced state is part of the key, so it never serves the real one
+		let forced = |s: &str| CiParams {
+			state: Some(s.into()),
+			..CiParams::default()
+		};
+		assert_eq!(forced(" RUNNING ").state(), Ok(Some(CiState::Running)));
+		assert_eq!(forced("").state(), Ok(None));
+		assert_eq!(key("o", &forced("")), base);
+		assert_eq!(
+			key("o", &forced("failing")),
+			Ok("https://b.dev/ci/o/badges/rust.yml?event=push&state=Failing".into())
+		);
+		assert_eq!(key("o", &forced("FAILING")), key("o", &forced("failing")));
+		assert_eq!(key("o", &forced("green")), Err(CiError::InvalidState));
 	}
 
 	#[test]
@@ -397,7 +528,7 @@ mod tests {
 			normalize_token(Some(" ghp_x\n".into())),
 			Some("ghp_x".into())
 		);
-		assert!(matches!(icon(), Icon::Path(_)));
+		assert!(matches!(icon(), Icon::Fill(_)));
 		assert!(CiError::RateLimited.is_transient() && !CiError::NotFound.is_transient());
 	}
 }

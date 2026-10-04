@@ -13,6 +13,7 @@ use crate::icon::{self, Icon, IconError, IconSource, MAX_ICON_BYTES};
 
 /// Pinned so icon content is immutable and CDN-cacheable
 const SIMPLE_ICONS_CDN: &str = "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons";
+const LUCIDE_CDN: &str = "https://cdn.jsdelivr.net/npm/lucide-static@1.52.0/icons";
 const FETCH_TIMEOUT: Duration = Duration::from_secs(3);
 /// Edge cache TTL for upstream icon responses (7 days)
 const ICON_CACHE_TTL: i32 = 7 * 24 * 60 * 60;
@@ -21,21 +22,27 @@ const INITIAL_BODY_CAPACITY: usize = 16 * 1024;
 
 pub async fn resolve(source: IconSource) -> Result<Icon, IconError> {
 	match source {
-		IconSource::SimpleIcon(slug) => resolve_simple_icon(&slug).await,
+		IconSource::Simple(slug) => {
+			resolve_svg(SIMPLE_ICONS_CDN, &slug, icon::simple_icon_from_svg).await
+		}
+		IconSource::Lucide(name) => {
+			resolve_svg(LUCIDE_CDN, &name, icon::lucide_icon_from_svg).await
+		}
 		IconSource::Remote(url) => resolve_image(url.as_str()).await,
 	}
 }
 
-async fn resolve_simple_icon(slug: &str) -> Result<Icon, IconError> {
-	let body = get(
-		&format!("{SIMPLE_ICONS_CDN}/{slug}.svg"),
-		FetchOptions::icon(),
-	)
-	.await?;
+/// Fetch `{cdn}/{name}.svg` and build an icon from it
+async fn resolve_svg(
+	cdn: &str,
+	name: &str,
+	build: fn(&str) -> Option<Icon>,
+) -> Result<Icon, IconError> {
+	let body = get(&format!("{cdn}/{name}.svg"), FetchOptions::icon()).await?;
 	std::str::from_utf8(&body.bytes)
 		.ok()
-		.and_then(icon::simple_icon_from_svg)
-		.ok_or_else(|| IconError::Upstream(format!("malformed simple icon {slug}")))
+		.and_then(build)
+		.ok_or_else(|| IconError::Upstream(format!("malformed icon {cdn}/{name}")))
 }
 
 async fn resolve_image(url: &str) -> Result<Icon, IconError> {

@@ -18,9 +18,13 @@
   <g filter="url(#{{ uid }}-icon-shadow)">
     <g clip-path="url(#{{ uid }}-icon-clip)">
       {%- match icon %}
-      {%- when Icon::Path(d) %}
+      {%- when Icon::Fill(d) %}
       <svg x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="{{ palette.icon }}" d="{{ d }}" />
+      </svg>
+      {%- when Icon::Stroke(d) %}
+      <svg x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="none" stroke="{{ palette.icon }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="{{ d }}" />
       </svg>
       {%- when Icon::Image(uri) %}
       <image x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" preserveAspectRatio="xMidYMid meet" href="{{ uri }}" />

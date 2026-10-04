@@ -1,15 +1,16 @@
-//! Devin's Badges style (cozy) badge API on Cloudflare Workers
+//! Badge API on Cloudflare Workers: Devin's Badges and pill styles
 //!
 //! Everything except [`fetch`] and [`service`] is runtime-free and tested
 //! natively
 
 pub mod api;
-pub mod badge;
 pub mod ci;
 pub mod color;
 mod fetch_error;
 pub mod icon;
 pub mod raster;
+pub mod spec;
+pub mod style;
 mod svg;
 mod text;
 
@@ -19,5 +20,6 @@ mod fetch;
 mod service;
 
 pub use api::Params;
-pub use badge::{render, BadgeError, BadgeSpec, ColorOptions};
 pub use icon::{Icon, PathData};
+pub use spec::{BadgeError, BadgeSpec, ColorOptions};
+pub use style::render;
