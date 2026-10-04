@@ -4,7 +4,9 @@ import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
+import type { Element, Root } from 'hast';
 import { unified } from 'unified';
+import { visit } from 'unist-util-visit';
 import { VFile } from 'vfile';
 import { matter } from 'vfile-matter';
 
@@ -17,11 +19,57 @@ const sources = import.meta.glob<string>('/src/docs/**/*.md', {
 	eager: true
 });
 
+/**
+ * Turn an image's Markdown title into a caption below it:
+ * `![Alt](url "Caption")` becomes `<figure><img alt="Alt"><figcaption>Caption`.
+ * Works for an image on its own line or alone in a table cell; anywhere else a
+ * block figure would break the surrounding text, so the build fails instead
+ */
+function rehypeImageCaptions() {
+	return (tree: Root, file: VFile) => {
+		const figure = (img: Element, caption: string): Element => {
+			delete img.properties.title;
+			return {
+				type: 'element',
+				tagName: 'figure',
+				properties: {},
+				children: [
+					img,
+					{
+						type: 'element',
+						tagName: 'figcaption',
+						properties: {},
+						children: [{ type: 'text', value: caption }]
+					}
+				]
+			};
+		};
+		visit(tree, 'element', (node, index, parent) => {
+			const caption = node.properties.title;
+			if (node.tagName !== 'img' || typeof caption !== 'string' || !parent || index === undefined)
+				return;
+			const alone =
+				parent.children.filter((child) => child.type !== 'text' || child.value.trim()).length === 1;
+			if (alone && parent.type === 'element' && parent.tagName === 'p') {
+				// Swap the paragraph for the figure; a <figure> can't sit inside a <p>
+				Object.assign(parent, figure(node, caption));
+			} else if (alone && parent.type === 'element' && ['td', 'th'].includes(parent.tagName)) {
+				parent.children = [figure(node, caption)];
+			} else {
+				throw new Error(
+					`${file.path}: an image with a caption must be on its own line or alone in a table cell`
+				);
+			}
+		});
+	};
+}
+
 /** Markdown (with GitHub tables) to HTML; raw HTML in the markdown is dropped */
 const processor = unified()
 	.use(remarkParse)
 	.use(remarkGfm)
 	.use(remarkRehype)
+	.use(rehypeImageCaptions)
 	// Shiki colours for fenced code; both themes are inlined as CSS variables and
 	// layout.css picks one from the .dark class, so there is no flash on load
 	.use(rehypePrettyCode, { theme: { light: 'catppuccin-latte', dark: 'catppuccin-mocha' } })
