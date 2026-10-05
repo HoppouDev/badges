@@ -5,8 +5,8 @@
 //! The whole badge (outline, chip, mark or icon, title and label) is drawn
 //! once in white as a mask, and a single gradient from `color` to `color2`
 //! across the badge's width shows through it, so every part, text included,
-//! takes its colour from the same place along one gradient. Opacities in the
-//! mask (the chip's tint, the dot's halo) shade it.
+//! takes its colour from the same place along one gradient. The chip's tint
+//! is a lower opacity in the mask, which shades it.
 //!
 //! Based on the "Pill chips" design reference, with these changes:
 //! - One gradient colours everything, instead of an accent title, a neutral
@@ -139,8 +139,9 @@ fn spin_css(uid: &str, mark: &MarkDraw) -> String {
 	)
 }
 
-/// Lucide's `check`, `x`, `refresh-cw` and `circle-slash` (lucide-static
-/// 1.52.0, ISC), bundled so marks never wait on a fetch
+/// Lucide's `check`, `x`, `refresh-cw`, `circle-slash`, `skip-forward` and
+/// `circle-question-mark` (lucide-static 1.52.0, ISC), bundled so marks never
+/// wait on a fetch
 static CHECK: LazyLock<PathData> =
 	LazyLock::new(|| bundled(include_str!("../../assets/icons/lucide-check.svg")));
 static CROSS: LazyLock<PathData> =
@@ -149,6 +150,13 @@ static REFRESH: LazyLock<PathData> =
 	LazyLock::new(|| bundled(include_str!("../../assets/icons/lucide-refresh-cw.svg")));
 static SLASH: LazyLock<PathData> =
 	LazyLock::new(|| bundled(include_str!("../../assets/icons/lucide-circle-slash.svg")));
+static SKIP: LazyLock<PathData> =
+	LazyLock::new(|| bundled(include_str!("../../assets/icons/lucide-skip-forward.svg")));
+static QUESTION: LazyLock<PathData> = LazyLock::new(|| {
+	bundled(include_str!(
+		"../../assets/icons/lucide-circle-question-mark.svg"
+	))
+});
 
 fn bundled(svg: &str) -> PathData {
 	match icon::lucide_icon_from_svg(svg) {
@@ -166,12 +174,8 @@ struct MarkDraw {
 	mark: Mark,
 	x: String,
 	y: String,
-	/// Dot halo and core radii
-	halo: String,
-	core: String,
-	/// Lucide icon for the check, cross and spinner, in a `size` square box
-	/// at (`box_x`, `box_y`)
-	icon: Option<&'static PathData>,
+	/// The mark's Lucide icon, in a `size` square box at (`box_x`, `box_y`)
+	icon: &'static PathData,
 	box_x: String,
 	box_y: String,
 	size: String,
@@ -182,18 +186,17 @@ struct MarkDraw {
 impl MarkDraw {
 	fn new(mark: Mark, x: f64, y: f64, size: f64) -> Self {
 		let icon = match mark {
-			Mark::Check => Some(&*CHECK),
-			Mark::Cross => Some(&*CROSS),
-			Mark::Spin => Some(&*REFRESH),
-			Mark::Slash => Some(&*SLASH),
-			Mark::Dot => None,
+			Mark::Check => &*CHECK,
+			Mark::Cross => &*CROSS,
+			Mark::Spin => &*REFRESH,
+			Mark::Slash => &*SLASH,
+			Mark::Skip => &*SKIP,
+			Mark::Question => &*QUESTION,
 		};
 		Self {
 			mark,
 			x: num(x),
 			y: num(y),
-			halo: num(size * 5.0 / 12.0),
-			core: num(size * 2.5 / 12.0),
 			icon,
 			box_x: num(x - size / 2.0),
 			box_y: num(y - size / 2.0),
@@ -465,31 +468,32 @@ mod tests {
 			["x", "y", "width"].map(|a| icon.attribute(a).unwrap()),
 			["13", "13", "18"]
 		);
-		// Marks share that centre, and an icon-only chip is a circle
+		// Marks share that box, and an icon-only chip is a circle
+		let mark_box = |svg: &str| {
+			let doc = Document::parse(svg).unwrap();
+			let n = doc
+				.descendants()
+				.find(|n| n.has_tag_name("svg") && n.attribute("x").is_some())
+				.unwrap();
+			["x", "y", "width"].map(|a| n.attribute(a).unwrap().to_string())
+		};
 		let mut mark = pill(None, "x", Size::Cozy, Theme::Dark);
-		mark.mark = Some(Mark::Dot);
+		mark.mark = Some(Mark::Question);
 		let svg = style::render(&mark).unwrap();
 		let doc = Document::parse(&svg).unwrap();
 		assert_eq!(class_end(&doc, "-chip"), ["4", "36", "36", "18"]);
-		let dot = doc
-			.descendants()
-			.find(|n| n.has_tag_name("circle"))
-			.unwrap();
-		assert_eq!(
-			["cx", "cy"].map(|a| dot.attribute(a).unwrap()),
-			["22", "22"]
-		);
-		// Compact: 34px, a mark centred in its round end
+		assert_eq!(mark_box(&svg), ["13", "13", "18"]);
+		// Compact: 34px, a mark centred in its round end at (17, 17)
 		let mut status = pill(None, "operational", Size::Compact, Theme::Dark);
-		status.mark = Some(Mark::Dot);
+		status.mark = Some(Mark::Question);
 		let compact = style::render(&status).unwrap();
 		assert_eq!(root_attr(&compact, "height"), "34");
-		assert!(compact.contains("cx=\"17\" cy=\"17\""));
-		// Without a mark or icon there's no dot, and the text starts at the
-		// edge padding, like a cozy badge with no chip
+		assert_eq!(mark_box(&compact), ["8", "8", "18"]);
+		// Without a mark or icon the text starts at the edge padding, like a
+		// cozy badge with no chip
 		let plain =
 			style::render(&pill(Some("release"), "v2", Size::Compact, Theme::Dark)).unwrap();
-		assert!(!plain.contains("<circle"));
+		assert!(!plain.contains("viewBox=\"0 0 24 24\""));
 		let title = Document::parse(&plain).unwrap();
 		let title = title
 			.descendants()
@@ -513,16 +517,16 @@ mod tests {
 			let spin = render(Mark::Spin, size);
 			// Only the spinner animates, and it sits where the icon would be
 			assert!(spin.contains("@keyframes") && spin.contains("prefers-reduced-motion"));
-			let dot = render(Mark::Dot, size);
-			assert!(dot.contains("<circle") && !dot.contains("@keyframes"));
 			let cross = render(Mark::Cross, size);
 			let check = render(Mark::Check, size);
 			let slash = render(Mark::Slash, size);
-			for still in [&check, &cross, &slash] {
+			let skip = render(Mark::Skip, size);
+			let question = render(Mark::Question, size);
+			for still in [&check, &cross, &slash, &skip, &question] {
 				assert!(!still.contains("@keyframes"));
 			}
-			// The check, cross, slash and spinner are Lucide's, stroked 2px in
-			// a 24-unit box at the 18px icon size, in place of the icon
+			// Every mark is its Lucide icon, stroked 2px in a 24-unit box at
+			// the 18px icon size, in place of the icon
 			for (svg, d) in [
 				(&check, "M20 6 9 17l-5-5"),
 				(&cross, "M18 6 6 18 M0 0 m6 6 12 12"),
@@ -530,6 +534,11 @@ mod tests {
 				(
 					&slash,
 					"M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 M9 15L15 9",
+				),
+				(&skip, "M21 4v16 M6.029 4.285"),
+				(
+					&question,
+					"M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 M9.09 9a3 3",
 				),
 			] {
 				assert!(svg.contains(&format!("d=\"{d}")), "{d}");
@@ -539,8 +548,8 @@ mod tests {
 				assert!(!svg.contains("<circle") && !svg.contains("M0 0h24v24H0z"));
 			}
 			// Every mark takes the same space, so the badges match in width
-			for other in [&cross, &check, &spin, &slash] {
-				assert_eq!(root_attr(&dot, "width"), root_attr(other, "width"));
+			for other in [&cross, &spin, &slash, &skip, &question] {
+				assert_eq!(root_attr(&check, "width"), root_attr(other, "width"));
 			}
 		}
 		// The spinner turns about its own centre, not the badge's corner;

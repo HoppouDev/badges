@@ -52,12 +52,11 @@ pub struct ColorOptions {
 	pub bg_bottom: Option<Rgb>,
 }
 
-/// A status mark drawn where the icon would go; only the pill style draws
-/// marks, and a mark takes the place of the icon
+/// A status mark drawn where the icon would go: a Lucide icon, stroked like
+/// one. Only the pill style draws marks, and a mark takes the place of the
+/// icon
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Mark {
-	/// A still dot
-	Dot,
 	/// Lucide's `refresh-cw`, turning, for something in progress
 	Spin,
 	/// Lucide's `check`
@@ -66,6 +65,10 @@ pub enum Mark {
 	Cross,
 	/// Lucide's `circle-slash`
 	Slash,
+	/// Lucide's `skip-forward`
+	Skip,
+	/// Lucide's `circle-question-mark`
+	Question,
 }
 
 /// A validated badge ready to render

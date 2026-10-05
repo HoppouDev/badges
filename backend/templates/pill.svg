@@ -18,18 +18,12 @@
         <rect class="{{ uid }}-chip" x="{{ c.x }}" y="{{ c.y }}" width="{{ c.width }}" height="{{ c.height }}" rx="{{ c.radius }}" stroke="none" fill-opacity="{{ paint.chip_opacity }}" />
         {%- endif %}
         {%- if let Some(m) = mark %}
-        {%- if m.mark == Mark::Dot %}
-        <circle cx="{{ m.x }}" cy="{{ m.y }}" r="{{ m.halo }}" stroke="none" fill-opacity=".25" />
-        <circle cx="{{ m.x }}" cy="{{ m.y }}" r="{{ m.core }}" stroke="none" />
-        {%- endif %}
-        {%- if let Some(d) = m.icon %}
         <!-- CSS turns the spinner's group; still, it's the plain icon -->
         <g{% if m.mark == Mark::Spin %} class="{{ uid }}-spin"{% endif %}>
           <svg x="{{ m.box_x }}" y="{{ m.box_y }}" width="{{ m.size }}" height="{{ m.size }}" viewBox="0 0 24 24">
-            <path fill="none" stroke-width="{{ m.stroke_width }}" stroke-linecap="round" stroke-linejoin="round" d="{{ d }}" />
+            <path fill="none" stroke-width="{{ m.stroke_width }}" stroke-linecap="round" stroke-linejoin="round" d="{{ m.icon }}" />
           </svg>
         </g>
-        {%- endif %}
         {%- endif %}
         {%- if let Some(Icon::Fill(d)) = icon %}
         <svg x="{{ icon_box.x }}" y="{{ icon_box.y }}" width="{{ icon_box.size }}" height="{{ icon_box.size }}" viewBox="0 0 24 24">

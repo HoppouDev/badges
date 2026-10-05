@@ -220,14 +220,15 @@ impl CiState {
 
 	/// Status mark for pill badges: a check on success, a cross on failure, a
 	/// turning refresh icon while running, a slashed circle when cancelled, a
-	/// still dot otherwise
+	/// skip icon when skipped and a question mark when unknown
 	pub fn mark(self) -> Mark {
 		match self {
 			Self::Passing => Mark::Check,
 			Self::Failing => Mark::Cross,
 			Self::Running => Mark::Spin,
 			Self::Cancelled => Mark::Slash,
-			Self::Skipped | Self::Unknown => Mark::Dot,
+			Self::Skipped => Mark::Skip,
+			Self::Unknown => Mark::Question,
 		}
 	}
 }
