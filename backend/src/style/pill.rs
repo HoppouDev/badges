@@ -139,14 +139,16 @@ fn spin_css(uid: &str, mark: &MarkDraw) -> String {
 	)
 }
 
-/// Lucide's `check`, `x` and `refresh-cw` (lucide-static 1.52.0, ISC),
-/// bundled so marks never wait on a fetch
+/// Lucide's `check`, `x`, `refresh-cw` and `circle-slash` (lucide-static
+/// 1.52.0, ISC), bundled so marks never wait on a fetch
 static CHECK: LazyLock<PathData> =
 	LazyLock::new(|| bundled(include_str!("../../assets/icons/lucide-check.svg")));
 static CROSS: LazyLock<PathData> =
 	LazyLock::new(|| bundled(include_str!("../../assets/icons/lucide-x.svg")));
 static REFRESH: LazyLock<PathData> =
 	LazyLock::new(|| bundled(include_str!("../../assets/icons/lucide-refresh-cw.svg")));
+static SLASH: LazyLock<PathData> =
+	LazyLock::new(|| bundled(include_str!("../../assets/icons/lucide-circle-slash.svg")));
 
 fn bundled(svg: &str) -> PathData {
 	match icon::lucide_icon_from_svg(svg) {
@@ -183,6 +185,7 @@ impl MarkDraw {
 			Mark::Check => Some(&*CHECK),
 			Mark::Cross => Some(&*CROSS),
 			Mark::Spin => Some(&*REFRESH),
+			Mark::Slash => Some(&*SLASH),
 			Mark::Dot => None,
 		};
 		Self {
@@ -514,13 +517,20 @@ mod tests {
 			assert!(dot.contains("<circle") && !dot.contains("@keyframes"));
 			let cross = render(Mark::Cross, size);
 			let check = render(Mark::Check, size);
-			assert!(!check.contains("@keyframes") && !cross.contains("@keyframes"));
-			// The check, cross and spinner are Lucide's, stroked 2px in a
-			// 24-unit box at the 18px icon size, in place of the icon
+			let slash = render(Mark::Slash, size);
+			for still in [&check, &cross, &slash] {
+				assert!(!still.contains("@keyframes"));
+			}
+			// The check, cross, slash and spinner are Lucide's, stroked 2px in
+			// a 24-unit box at the 18px icon size, in place of the icon
 			for (svg, d) in [
 				(&check, "M20 6 9 17l-5-5"),
 				(&cross, "M18 6 6 18 M0 0 m6 6 12 12"),
 				(&spin, "M3 12a9 9 0 0 1 9-9"),
+				(
+					&slash,
+					"M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 M9 15L15 9",
+				),
 			] {
 				assert!(svg.contains(&format!("d=\"{d}")), "{d}");
 				assert!(svg.contains("viewBox=\"0 0 24 24\""));
@@ -529,7 +539,7 @@ mod tests {
 				assert!(!svg.contains("<circle") && !svg.contains("M0 0h24v24H0z"));
 			}
 			// Every mark takes the same space, so the badges match in width
-			for other in [&cross, &check, &spin] {
+			for other in [&cross, &check, &spin, &slash] {
 				assert_eq!(root_attr(&dot, "width"), root_attr(other, "width"));
 			}
 		}

@@ -64,6 +64,8 @@ pub enum Mark {
 	Check,
 	/// Lucide's `x`
 	Cross,
+	/// Lucide's `circle-slash`
+	Slash,
 }
 
 /// A validated badge ready to render
