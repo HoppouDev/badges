@@ -6,7 +6,7 @@
 
 use askama::Template;
 
-use super::Size;
+use super::{Size, Theme};
 use crate::color::{self, Rgb};
 use crate::icon::Icon;
 use crate::spec::{BadgeError, BadgeSpec, ColorOptions, DEFAULT_ACCENT};
@@ -108,9 +108,11 @@ fn geometry(size: Size) -> &'static Geometry {
 	}
 }
 
-/// Title colour when `titleColor` is unset
+/// Title colour when `titleColor` is unset, on the dark and light themes
 pub const DEFAULT_TITLE: Rgb = Rgb(0xe8, 0xe8, 0xe8);
+const LIGHT_TITLE: Rgb = Rgb(0x40, 0x40, 0x40);
 
+/// Colours for one theme
 #[derive(Debug, Hash)]
 struct Palette {
 	label: Rgb,
@@ -119,25 +121,68 @@ struct Palette {
 	icon: Rgb,
 	bg_top: Rgb,
 	bg_bottom: Rgb,
+	/// Inner border: white on the dark theme, as in Devin's Badges, and black
+	/// on the light one
+	border: &'static str,
+	border_opacity: &'static str,
+	/// Drop shadow behind the icon and text, fainter on the light theme
+	shadow_opacity: &'static str,
 }
 
-/// Fill in the colours `c` leaves unset
-fn palette(c: &ColorOptions) -> Palette {
-	let label = c.accent.unwrap_or(DEFAULT_ACCENT);
-	let (bg_top, bg_bottom) = match (c.bg_top, c.bg_bottom) {
-		(Some(top), bottom) => (top, bottom.unwrap_or(top)),
-		(None, bottom) => {
-			let (top, derived_bottom) = color::background(label);
-			(top, bottom.unwrap_or(derived_bottom))
+impl Palette {
+	/// Fill in the colours `c` leaves unset for the dark or light theme.
+	/// Devin's Badges are dark-only and use their colours as given; the light
+	/// theme tones them to stay readable on its pale background
+	fn new(c: &ColorOptions, light: bool) -> Self {
+		let accent = c.accent.unwrap_or(DEFAULT_ACCENT);
+		let (bg_top, bg_bottom) = match (c.bg_top, c.bg_bottom) {
+			(Some(top), bottom) => (top, bottom.unwrap_or(top)),
+			(None, bottom) => {
+				let (top, derived_bottom) = color::background(accent, light);
+				(top, bottom.unwrap_or(derived_bottom))
+			}
+		};
+		let fg = |c: Rgb| if light { color::tone(c, true) } else { c };
+		Self {
+			label: fg(accent),
+			label_to: c.accent_to.map(fg),
+			title: c
+				.title
+				.map(fg)
+				.unwrap_or(if light { LIGHT_TITLE } else { DEFAULT_TITLE }),
+			icon: fg(c.icon.unwrap_or(accent)),
+			bg_top,
+			bg_bottom,
+			border: if light { "#000" } else { "#fff" },
+			border_opacity: if light { ".1" } else { ".15" },
+			shadow_opacity: if light { ".1" } else { ".25" },
 		}
-	};
-	Palette {
-		label,
-		label_to: c.accent_to,
-		title: c.title.unwrap_or(DEFAULT_TITLE),
-		icon: c.icon.unwrap_or(label),
-		bg_top,
-		bg_bottom,
+	}
+
+	/// CSS that repaints the badge in this theme when the viewer prefers light
+	fn light_override(&self, uid: &str) -> String {
+		let mut css = format!(
+			"@media (prefers-color-scheme: light){{\
+			 .{uid}-b0{{stop-color:{}}}.{uid}-b1{{stop-color:{}}}\
+			 .{uid}-border{{stroke:{};stroke-opacity:{}}}.{uid}-shadow{{flood-opacity:{}}}\
+			 .{uid}-title{{fill:{}}}.{uid}-label,.{uid}-l0{{fill:{};stop-color:{}}}\
+			 .{uid}-icon-fill{{fill:{}}}.{uid}-icon-stroke{{stroke:{}}}",
+			self.bg_top,
+			self.bg_bottom,
+			self.border,
+			self.border_opacity,
+			self.shadow_opacity,
+			self.title,
+			self.label,
+			self.label,
+			self.icon,
+			self.icon,
+		);
+		if let Some(to) = self.label_to {
+			css += &format!(".{uid}-l1{{stop-color:{to}}}");
+		}
+		css.push('}');
+		css
 	}
 }
 
@@ -265,6 +310,8 @@ struct BadgeSvg<'a> {
 	radius: String,
 	border: Border,
 	bg_gradient_x: String,
+	/// Light-theme CSS for `theme=auto`
+	css: Option<String>,
 	palette: &'a Palette,
 	icon: Option<&'a Icon>,
 	icon_box: IconBox,
@@ -278,9 +325,17 @@ struct BadgeSvg<'a> {
 /// Render a badge SVG in the Devin style
 pub(super) fn render(spec: &BadgeSpec) -> Result<String, BadgeError> {
 	let g = geometry(spec.look.size);
-	let palette = palette(&spec.colors);
+	let (palette, light) = match super::auto_for_bg(spec.look.theme, spec.colors.bg_top) {
+		Theme::Dark => (Palette::new(&spec.colors, false), None),
+		Theme::Light => (Palette::new(&spec.colors, true), None),
+		Theme::Auto => (
+			Palette::new(&spec.colors, false),
+			Some(Palette::new(&spec.colors, true)),
+		),
+	};
 	let layout = layout(spec)?;
-	let uid = super::uid(spec, &palette);
+	let uid = super::uid(spec, (&palette, &light));
+	let css = light.map(|p| p.light_override(&uid));
 	let alt = spec.alt();
 	let label_gradient = palette.label_to.map(|to| LabelGradient {
 		x: num(layout.label_x + layout.label.width / 2.0),
@@ -304,6 +359,7 @@ pub(super) fn render(spec: &BadgeSpec) -> Result<String, BadgeError> {
 			radius: num(g.corner_radius - border_inset),
 		},
 		bg_gradient_x: num(layout.width / 2.0),
+		css,
 		palette: &palette,
 		icon: spec.icon.as_ref(),
 		icon_box: IconBox {
@@ -502,11 +558,59 @@ mod tests {
 		assert_ne!(uid(&cozy), uid(&compact));
 		// 8 padding + 76 title + 4 gap + 41 label + 8 padding
 		assert_eq!(width(&compact), "137");
-		// The theme only affects styles that have one
+		// The theme changes colours, never the layout
 		a.look.theme = Theme::Light;
 		let light = render(&a).unwrap();
 		assert_eq!(width(&light), "137");
-		assert!(light.contains("stop-color=\"#303030\""));
+		assert!(light.contains("stop-color=\"#f7f7f7\""));
+	}
+
+	#[test]
+	fn themes() {
+		let render_theme = |theme, bg: Option<&str>| {
+			let mut s = spec("Built with", "Sass");
+			s.icon = Some(square());
+			s.colors.accent = Rgb::parse("cd6699");
+			s.colors.bg_top = bg.and_then(Rgb::parse);
+			s.look.theme = theme;
+			render(&s).unwrap()
+		};
+		// Dark is the original design, colours as given and no CSS
+		let dark = render_theme(Theme::Dark, None);
+		assert!(dark.contains("fill=\"#cd6699\"") && !dark.contains("<style"));
+		assert!(dark.contains("stroke=\"#fff\" stroke-opacity=\".15\""));
+		assert!(dark.contains("flood-opacity=\".25\""));
+		// Light has a pale background, a dark border and toned colours that
+		// stay readable on it
+		let light = render_theme(Theme::Light, None);
+		assert!(!light.contains("#cd6699") && !light.contains("<style"));
+		assert!(light.contains("stroke=\"#000\" stroke-opacity=\".1\""));
+		let light_doc = Document::parse(&light).unwrap();
+		let top = by_id(&light_doc, "bg")
+			.children()
+			.find_map(|n| n.attribute("stop-color"))
+			.unwrap();
+		assert!(color::is_light(Rgb::parse(top).unwrap()), "{top}");
+		// Auto paints dark and switches every colour by media query
+		let auto = render_theme(Theme::Auto, None);
+		assert!(auto.contains("fill=\"#cd6699\""));
+		assert!(auto.contains("@media (prefers-color-scheme: light){"));
+		for class in [
+			"-b0{",
+			"-b1{",
+			"-border{",
+			"-shadow{",
+			"-title{",
+			"-label,",
+			"-icon-fill{",
+		] {
+			assert!(auto.contains(class), "{class}");
+		}
+		// A fixed bg settles auto on whichever theme suits it
+		let on_light = render_theme(Theme::Auto, Some("fef3c7"));
+		assert!(!on_light.contains("<style") && on_light.contains("stroke=\"#000\""));
+		let on_dark = render_theme(Theme::Auto, Some("1e293b"));
+		assert!(!on_dark.contains("<style") && on_dark.contains("fill=\"#cd6699\""));
 	}
 
 	#[test]
@@ -656,10 +760,10 @@ mod tests {
 	#[test]
 	fn background_fallbacks() {
 		let stops = |c: ColorOptions| {
-			let p = palette(&c);
+			let p = Palette::new(&c, false);
 			(p.bg_top, p.bg_bottom)
 		};
-		let grey = color::background(DEFAULT_ACCENT);
+		let grey = color::background(DEFAULT_ACCENT, false);
 		assert_eq!(stops(ColorOptions::default()), grey);
 		let blue = Rgb(0x11, 0x22, 0x33);
 		assert_eq!(

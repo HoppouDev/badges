@@ -12,11 +12,14 @@ pub struct Rgb(pub u8, pub u8, pub u8);
 const NEUTRAL_SATURATION: f64 = 0.05;
 /// Background saturation relative to the accent's
 const BG_SATURATION_SCALE: f64 = 0.75;
-/// Background gradient lightness, top and bottom
+/// Background gradient lightness, top and bottom, on the dark and light themes
 const BG_TOP_LIGHTNESS: f64 = 0.14;
 const BG_BOTTOM_LIGHTNESS: f64 = 0.08;
-/// Greys used by the neutral "generic" badges
+const LIGHT_BG_TOP_LIGHTNESS: f64 = 0.97;
+const LIGHT_BG_BOTTOM_LIGHTNESS: f64 = 0.91;
+/// Greys used by the neutral "generic" badges, and their light counterparts
 const NEUTRAL_BG: (Rgb, Rgb) = (Rgb(0x30, 0x30, 0x30), Rgb(0x1d, 0x1d, 0x1d));
+const NEUTRAL_LIGHT_BG: (Rgb, Rgb) = (Rgb(0xf7, 0xf7, 0xf7), Rgb(0xe8, 0xe8, 0xe8));
 
 impl Rgb {
 	/// Parse an opaque CSS colour: hex with or without `#`, `rgb()`, `hsl()` or
@@ -114,19 +117,25 @@ impl fmt::Display for Rgb {
 	}
 }
 
-/// Derive the dark vertical background gradient from an accent colour
+/// Derive the vertical background gradient from an accent colour, for the
+/// dark or light theme
 ///
-/// Devin's Badges hand-pick these, but across the set the top stop sits
-/// around 14% lightness and the bottom around 8%, keeping the accent hue with
-/// reduced saturation. Neutral accents use the generic badges' greys
-pub fn background(accent: Rgb) -> (Rgb, Rgb) {
+/// Devin's Badges hand-pick the dark ones, but across the set the top stop
+/// sits around 14% lightness and the bottom around 8%, keeping the accent hue
+/// with reduced saturation. The light theme mirrors that near white, still
+/// lighter at the top. Neutral accents use the generic badges' greys
+pub fn background(accent: Rgb, light: bool) -> (Rgb, Rgb) {
 	let hsl = accent.to_hsl();
 	if hsl.saturation < NEUTRAL_SATURATION {
-		return NEUTRAL_BG;
+		return if light { NEUTRAL_LIGHT_BG } else { NEUTRAL_BG };
 	}
 	let saturation = hsl.saturation * BG_SATURATION_SCALE;
 	let at = |lightness| Rgb::from_hsl(Hsl::new(hsl.hue, saturation, lightness));
-	(at(BG_TOP_LIGHTNESS), at(BG_BOTTOM_LIGHTNESS))
+	if light {
+		(at(LIGHT_BG_TOP_LIGHTNESS), at(LIGHT_BG_BOTTOM_LIGHTNESS))
+	} else {
+		(at(BG_TOP_LIGHTNESS), at(BG_BOTTOM_LIGHTNESS))
+	}
 }
 
 #[cfg(test)]
@@ -155,12 +164,20 @@ mod tests {
 	}
 
 	#[test]
-	fn background_derivation() {
-		assert_eq!(background(Rgb(0xf1, 0xf1, 0xf1)), NEUTRAL_BG);
-		let (top, bottom) = background(Rgb(0xcd, 0x66, 0x99));
+	fn backgrounds() {
+		assert_eq!(background(Rgb(0xf1, 0xf1, 0xf1), false), NEUTRAL_BG);
+		assert_eq!(background(Rgb(0xf1, 0xf1, 0xf1), true), NEUTRAL_LIGHT_BG);
+		let (top, bottom) = background(Rgb(0xcd, 0x66, 0x99), false);
 		assert_eq!(
 			(top.to_string(), bottom.to_string()),
 			("#311624".into(), "#1c0d14".into())
+		);
+		// Light keeps the hue near white, lighter at the top than the bottom
+		let (top, bottom) = background(Rgb(0xcd, 0x66, 0x99), true);
+		assert!(top.to_oklch().l > bottom.to_oklch().l && bottom.to_oklch().l > 0.9);
+		assert!(
+			(top.to_hsl().hue.into_positive_degrees() - 330.0).abs() < 2.0,
+			"{top}"
 		);
 	}
 

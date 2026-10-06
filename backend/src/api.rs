@@ -45,7 +45,7 @@ pub const PARAMS: &[(&str, &str)] = &[
 	("size", "cozy (default) or compact"),
 	(
 		"theme",
-		"pill colours: auto (default, follows the viewer), dark or light",
+		"auto (default, follows the viewer), dark or light",
 	),
 	("format", "svg (default), png, avif or webp"),
 ];

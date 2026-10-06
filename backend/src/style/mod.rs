@@ -11,22 +11,12 @@ use crate::spec::{BadgeError, BadgeSpec};
 /// Badge design, from `style`
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Style {
-	/// Devin's Badges: a dark gradient card with an outlined Inter label
+	/// Devin's Badges: a gradient card with an outlined Inter label, dark
+	/// like the originals or in a light variant
 	#[default]
 	Devin,
-	/// A rounded chip painted with one gradient, with monospace text, in a
-	/// light or dark theme
+	/// A rounded chip painted with one gradient, with monospace text
 	Pill,
-}
-
-impl Style {
-	/// Whether `theme` changes this style's colours
-	pub fn has_theme(self) -> bool {
-		match self {
-			Self::Devin => false,
-			Self::Pill => true,
-		}
-	}
 }
 
 /// Badge size, from `size`
@@ -37,7 +27,7 @@ pub enum Size {
 	Compact,
 }
 
-/// Colour scheme for styles that have one, from `theme`
+/// Colour scheme, from `theme`
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Theme {
 	/// SVGs follow the viewer's `prefers-color-scheme`; raster formats are dark

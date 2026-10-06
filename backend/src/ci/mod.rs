@@ -34,7 +34,7 @@ pub const PARAMS: &[(&str, &str)] = &[
 	("event", "triggering event to report (default push)"),
 	("style", "devin (default) or pill"),
 	("size", "cozy (default) or compact"),
-	("theme", "pill colours: auto (default), dark or light"),
+	("theme", "auto (default), dark or light"),
 	("format", "svg (default), png, avif or webp"),
 	(
 		"state",
@@ -270,9 +270,8 @@ pub fn cache_key(
 	query.append_pair("event", params.event()?);
 	let format = params.format()?;
 	// Only choices that change the image appear, so equivalent spellings
-	// (style=cozy, theme=auto on a PNG, any theme on a Devin badge) share one
-	// key. Bad values are rejected rather than dropped, so they can't poison
-	// the default key
+	// (style=cozy, theme=auto on a PNG) share one key. Bad values are
+	// rejected rather than dropped, so they can't poison the default key
 	let look = params
 		.look()
 		.map_err(|e| match e {
@@ -288,7 +287,7 @@ pub fn cache_key(
 		query.append_pair("size", look.size.name());
 	}
 	let default_theme = Look::default().for_format(format).theme;
-	if look.style.has_theme() && look.theme != default_theme {
+	if look.theme != default_theme {
 		query.append_pair("theme", look.theme.name());
 	}
 	if format != Format::Svg {
