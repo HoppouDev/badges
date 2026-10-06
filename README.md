@@ -6,9 +6,9 @@ A silly badges API.
 
 <br>
 
-<a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?style=pill&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust"></a>
-<a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI status" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill"></a>
-<a href="https://badges.hoppou.dev/docs"><img alt="Read the docs" src="https://badges.hoppou.dev/badge?style=pill&title=Read%20the&label=Docs&color=60a5fa&icon=lucide:book-open"></a>
+<a href="https://www.rust-lang.org"><img alt="Built with Rust" src="https://badges.hoppou.dev/badge?style=pill&size=cozy&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust"></a>
+<a href="https://github.com/HoppouDev/badges/actions/workflows/rust.yml"><img alt="CI status" src="https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill&size=cozy"></a>
+<a href="https://badges.hoppou.dev/docs"><img alt="Read the docs" src="https://badges.hoppou.dev/badge?style=pill&size=cozy&title=Read%20the&label=Docs&color=60a5fa&icon=lucide:book-open"></a>
 
 </div>
 
@@ -40,15 +40,21 @@ the frontend. `badge*` also matches paths such as `/badges`, so frontend pages m
 The API is the `badges` crate in `backend/`, a member of the Cargo workspace at the repo root. Cargo
 commands run from the root, and `wrangler` runs from `backend/`.
 
-Git hooks run through [prek](https://prek.j178.dev), configured in `prek.toml`. Before each commit,
-it fixes whitespace, formats with tombi and rustfmt, lints and formats JS, TS and Svelte with
-[ESLint](https://eslint.org) (`frontend/eslint.config.js`), lints and formats JSON, CSS and HTML
-with [Biome](https://biomejs.dev) (`biome.json`), lints and rewraps Markdown with
-[rumdl](https://github.com/rvben/rumdl) (`.rumdl.toml`), and runs clippy. A formatter that changes
-a file fails the commit, so review and stage its edits, then commit again. On `git commit` without
-a conventional `-m`, [koji](https://github.com/cococonscious/koji) prompts for one, with scopes
-autocompleted from history (`.koji.toml`). Install the tools and hooks once per clone. ESLint and
-Biome come from the frontend's dependencies:
+Git hooks run through [prek](https://prek.j178.dev), configured in `prek.toml`. Before each commit
+they:
+
+- fix trailing whitespace and missing final newlines, and reject large files
+- format TOML with tombi and Rust with rustfmt
+- lint and format JS, TS and Svelte with [ESLint](https://eslint.org) (`frontend/eslint.config.js`)
+- lint and format JSON, CSS and HTML with [Biome](https://biomejs.dev) (`biome.json`)
+- lint and rewrap Markdown with [rumdl](https://github.com/rvben/rumdl) (`.rumdl.toml`)
+- run clippy
+
+A formatter that changes a file fails the commit, so review and stage its edits, then commit again.
+On `git commit` without a conventional `-m`, [koji](https://github.com/cococonscious/koji) prompts
+for one, with scopes autocompleted from history (`.koji.toml`).
+
+Install the tools and hooks once per clone. ESLint and Biome come from the frontend's dependencies:
 
 ```sh
 cargo install cargo-binstall  # once, fetches prebuilt binaries for the line below
@@ -72,38 +78,8 @@ cargo run --example render -- state=running style=pill > running.svg
 cd backend && npx wrangler dev
 ```
 
-The frontend uses pnpm. Its docs are Markdown files in `frontend/src/docs/`, served under `/docs`
-(`index.md` is `/docs`, `foo.md` is `/docs/foo`), turned into HTML with
-[remark](https://github.com/remarkjs/remark) and
-[remark-rehype](https://github.com/remarkjs/remark-rehype) and prerendered at build time.
-
-Each doc starts with a frontmatter block. `title` is the page's heading, its browser title and its
-sidebar link, so docs don't write their own top-level heading. `section` is the sidebar group it
-sits under, and the optional `order` (default `0`, lowest first, ties sorted by title) positions it.
-Sections follow the order of their first page. The build fails if `title` or `section` is missing,
-`order` is not a finite number, a doc has a top-level heading (`# Title`, or `Title` underlined with
-`===`), or two files map to the same URL (such as `foo.md` and `foo/index.md`). `/` redirects to
-`/docs`.
-
-```markdown
----
-title: Overview
-section: Getting started
----
-```
-
-An image's Markdown title becomes a caption below it, for an image on its own line or alone in a
-table cell (anywhere else fails the build):
-
-```markdown
-![Built with Rust](https://badges.hoppou.dev/badge?label=Rust "Built with Rust")
-```
-
-```sh
-cd frontend
-pnpm install
-pnpm dev
-```
+The frontend is a SvelteKit app in `frontend/` that uses pnpm. Its
+[README](frontend/README.md) covers its commands and how to write docs pages.
 
 ## Releasing
 
