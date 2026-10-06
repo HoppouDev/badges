@@ -35,6 +35,6 @@ opened directly.
 | Invalid custom badge requests (`4xx`)          | 5 minutes | 5 minutes       |
 | Other custom badge errors (`5xx`)              | never     | never           |
 
-A custom badge is cached for its URL. When the service is updated, an old copy can keep showing for
-up to a day in browsers and a week at the edge. Changing the URL, for example by adding `&v=2`, gets
-the new badge at once.
+A custom badge is cached for its URL. After the service is updated, an old copy can keep showing in
+browsers for up to a day. Changing the URL, for example by adding `&v=2`, gets the new badge at
+once.

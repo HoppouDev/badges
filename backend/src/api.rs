@@ -224,24 +224,31 @@ fn image_response(body: Result<(Format, Vec<u8>), ApiError>, policy: CachePolicy
 
 /// Edge cache key for a request, or `None` when it must not be cached
 ///
-/// `/ci` keys are canonical (see [`ci::cache_key`]) so arbitrary extra query
-/// parameters can't force GitHub requests
+/// Keys live under the release version, so a deploy that changes how badges
+/// render doesn't keep serving week-old images from before it. `/ci` keys are
+/// canonical (see [`ci::cache_key`]) so arbitrary extra query parameters can't
+/// force GitHub requests
 pub fn cache_key(method: &Method, uri: &Uri) -> Option<String> {
 	if method != Method::GET {
 		return None;
 	}
+	let prefix = format!(
+		"{}://{}/__cache/v{}",
+		uri.scheme_str()?,
+		uri.authority()?,
+		env!("CARGO_PKG_VERSION")
+	);
 	let path = uri.path();
 	if BADGE_ROUTES.contains(&path) {
-		return Some(uri.to_string());
+		return Some(format!("{prefix}{}", uri.path_and_query()?));
 	}
 	let mut segments = path.strip_prefix(ci::ROUTE_PREFIX)?.split('/');
 	let (owner, repo, workflow) = (segments.next()?, segments.next()?, segments.next()?);
 	if segments.next().is_some() {
 		return None;
 	}
-	let origin = format!("{}://{}", uri.scheme_str()?, uri.authority()?);
 	let params = Query::<CiParams>::try_from_uri(uri).ok()?.0;
-	ci::cache_key(&origin, owner, repo, workflow, &params).ok()
+	ci::cache_key(&prefix, owner, repo, workflow, &params).ok()
 }
 
 /// Whether a response may be written to the edge cache
@@ -655,15 +662,17 @@ mod tests {
 	fn cache_keys() {
 		let key = |method: Method, uri: &str| cache_key(&method, &uri.parse().unwrap());
 		let b = "https://b.dev";
+		// Each release gets its own keys, so a deploy never serves old renders
+		let v = format!("{b}/__cache/v{}", env!("CARGO_PKG_VERSION"));
 		assert_eq!(
 			key(Method::GET, &format!("{b}/badge?label=x")),
-			Some(format!("{b}/badge?label=x"))
+			Some(format!("{v}/badge?label=x"))
 		);
 		assert_eq!(
 			key(Method::GET, &format!("{b}/badge.svg")),
-			Some(format!("{b}/badge.svg"))
+			Some(format!("{v}/badge.svg"))
 		);
-		let canonical = Some(format!("{b}/ci/o/r/rust.yml?event=push"));
+		let canonical = Some(format!("{v}/ci/o/r/rust.yml?event=push"));
 		assert_eq!(key(Method::GET, &format!("{b}/ci/O/R/rust.yml")), canonical);
 		assert_eq!(
 			key(Method::GET, &format!("{b}/ci/o/r/rust.yml?x=1&junk=2")),
