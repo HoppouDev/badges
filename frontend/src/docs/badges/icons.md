@@ -10,7 +10,7 @@ order: 14
 | --------------- | ---------------------------------------------------------------- |
 | `simple:<slug>` | A filled brand logo from [Simple Icons](https://simpleicons.org) |
 | `lucide:<name>` | An outlined icon from [Lucide](https://lucide.dev/icons)         |
-| `https://…`     | An image; see [Image URLs](#image-urls)                          |
+| `https://…`     | An image, see [Image URLs](#image-urls)                          |
 
 The set and name are case-insensitive. A name without a set, such as `icon=rust`, returns `400`, and
 one the set doesn't have returns `404`.

@@ -20,8 +20,8 @@ default, `auto`, a badge follows the viewer's light or dark mode.
   the page.
 
 In the light theme, `color`, `color2`, `titleColor` and `iconColor` are darkened as far as needed to
-stay readable on a light background; the pill's dark theme lightens them likewise. So any colour
-works in both.
+stay readable on a light background. The pill's dark theme lightens them in the same way, so any
+colour works in both.
 
 ## auto
 

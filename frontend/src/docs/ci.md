@@ -24,14 +24,14 @@ repositories are served.
 
 | Parameter | Description                                                                         |
 | --------- | ----------------------------------------------------------------------------------- |
-| `title`   | Text before the state (default `CI`; empty for a state-only badge)                  |
+| `title`   | Text before the state (default `CI`, or empty for a state-only badge)               |
 | `branch`  | Branch to report (default: the repository's default branch)                         |
 | `event`   | Triggering event to report (default `push`)                                         |
-| `state`   | Show this [state](#states) without asking GitHub; see [Previewing](#previewing)     |
-| `style`   | `devin` (default) or `pill`; see [Styles and sizes](/docs/badges/styles)            |
+| `state`   | Show this [state](#states) without asking GitHub, see [Previewing](#previewing)     |
+| `style`   | `devin` (default) or `pill`, see [Styles and sizes](/docs/badges/styles)            |
 | `size`    | `cozy` (default) or `compact`                                                       |
-| `theme`   | `auto` (default), `dark` or `light`; see [Themes](/docs/badges/themes)              |
-| `format`  | `svg` (default), `png`, `avif` or `webp`; see [Image formats](/docs/badges/formats) |
+| `theme`   | `auto` (default), `dark` or `light`, see [Themes](/docs/badges/themes)              |
+| `format`  | `svg` (default), `png`, `avif` or `webp`, see [Image formats](/docs/badges/formats) |
 
 The badge reports the latest run triggered by `event`, so pull requests from forks can't change a
 badge that follows `push` runs.
@@ -45,8 +45,8 @@ badge that follows `push` runs.
 
 ## States
 
-States are coloured like GitHub's own status icons. Devin badges show the GitHub Actions logo; pill
-badges show a mark for the state instead.
+States are coloured like GitHub's own status icons. Devin badges show the GitHub Actions logo, and
+pill badges show a mark for the state instead.
 
 | State     | The run                   | Devin                                                                                | Pill                                                                                            |
 | --------- | ------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
@@ -73,4 +73,4 @@ GET /ci/HoppouDev/badges/rust.yml?style=pill&state=running
 ## Freshness
 
 Status badges are cached for a minute, so a new run can take that long to show. A repository that
-has been renamed returns `400`; use its new name.
+has been renamed returns `400`, so use its new name.

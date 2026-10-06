@@ -53,7 +53,7 @@ GET /badge?title=Powered%20by&label=Coffee&color=d97706&titleColor=fcd34d
 
 ### Background
 
-`bg` alone gives a flat background; add `bg2` for a gradient from `bg` at the top to `bg2` at the
+`bg` alone gives a flat background. Add `bg2` for a gradient from `bg` at the top to `bg2` at the
 bottom. `bg2` alone keeps the derived top and replaces only the bottom.
 
 | Badge                                                                                                          | Query                               |
@@ -77,5 +77,5 @@ GET /badge?style=pill&title=gradient&label=pink%20to%20violet&color=f472b6&color
 ```
 
 The [theme](/docs/badges/themes) tones both ends to stay readable on the page. The background is
-transparent, apart from a faint tint of the gradient; `bg` fills it with a solid colour instead. An
-image icon keeps its own colours.
+transparent, apart from a faint tint of the gradient, and `bg` fills it with a solid colour instead.
+An image icon keeps its own colours.

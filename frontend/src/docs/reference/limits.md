@@ -12,9 +12,9 @@ opened directly.
 | Status | When                                                                                                                                                                                        |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `400`  | A parameter is missing or invalid: no `label`, an unknown `style`, `size`, `theme`, `format` or `state`, a bad colour, an icon without a set, a disallowed image host, a renamed repository |
-| `404`  | The icon, repository or workflow doesn't exist; private repositories also answer `404`                                                                                                      |
+| `404`  | The icon, repository or workflow doesn't exist. Private repositories also answer `404`                                                                                                      |
 | `502`  | GitHub or the icon host returned an error                                                                                                                                                   |
-| `503`  | GitHub's rate limit was reached; try again shortly                                                                                                                                          |
+| `503`  | GitHub's rate limit was reached, so try again shortly                                                                                                                                       |
 | `504`  | GitHub or the icon host took too long                                                                                                                                                       |
 
 ## Limits
@@ -36,5 +36,5 @@ opened directly.
 | Other custom badge errors (`5xx`)              | never     | never           |
 
 A custom badge is cached for its URL. When the service is updated, an old copy can keep showing for
-up to a day in browsers and a week at the edge; changing the URL, for example by adding `&v=2`, gets
+up to a day in browsers and a week at the edge. Changing the URL, for example by adding `&v=2`, gets
 the new badge at once.

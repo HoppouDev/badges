@@ -16,7 +16,7 @@ and [workflow status badges](/docs/ci).
 
 The default, after [Devin's Badges](https://github.com/intergrav/devins-badges): a gradient card
 with a faint border and a bold label. Its background is derived from `color`. In the dark theme it's
-the original dark design; the light theme gives a pale variant for light pages; see
+the original dark design, and the light theme gives a pale variant for light pages. See
 [Themes](/docs/badges/themes).
 
 | Cozy                                                                                    | Compact                                                                                              |
@@ -30,8 +30,8 @@ the original dark design; the light theme gives a pale variant for light pages; 
 ## Pill
 
 A rounded chip with monospace text on a transparent background. One gradient paints the whole badge,
-text included, from `color` on the left to `color2` on the right; see
-[Pill colours](/docs/badges/colours#pill). It adapts to light and dark pages; see
+text included, from `color` on the left to `color2` on the right (see
+[Pill colours](/docs/badges/colours#pill)). It adapts to light and dark pages, see
 [Themes](/docs/badges/themes).
 
 ```http

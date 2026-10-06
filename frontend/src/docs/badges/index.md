@@ -22,17 +22,17 @@ Only `label` is required.
 | Parameter    | Description                                                                         |
 | ------------ | ----------------------------------------------------------------------------------- |
 | `label`      | The main text                                                                       |
-| `title`      | Smaller text before the label; omit it for a label-only badge                       |
-| `style`      | `devin` (default) or `pill`; see [Styles and sizes](/docs/badges/styles)            |
+| `title`      | Smaller text before the label, omit it for a label-only badge                       |
+| `style`      | `devin` (default) or `pill`, see [Styles and sizes](/docs/badges/styles)            |
 | `size`       | `cozy` (default) or `compact`                                                       |
-| `theme`      | `auto` (default), `dark` or `light`; see [Themes](/docs/badges/themes)              |
-| `color`      | Accent colour (default `f1f1f1`); see [Colours](/docs/badges/colours)               |
+| `theme`      | `auto` (default), `dark` or `light`, see [Themes](/docs/badges/themes)              |
+| `color`      | Accent colour (default `f1f1f1`), see [Colours](/docs/badges/colours)               |
 | `color2`     | Second accent colour                                                                |
 | `titleColor` | Devin only: title colour                                                            |
 | `bg`, `bg2`  | Background colours                                                                  |
-| `icon`       | `simple:<slug>`, `lucide:<name>` or an image URL; see [Icons](/docs/badges/icons)   |
+| `icon`       | `simple:<slug>`, `lucide:<name>` or an image URL, see [Icons](/docs/badges/icons)   |
 | `iconColor`  | Devin only: icon colour                                                             |
-| `format`     | `svg` (default), `png`, `avif` or `webp`; see [Image formats](/docs/badges/formats) |
+| `format`     | `svg` (default), `png`, `avif` or `webp`, see [Image formats](/docs/badges/formats) |
 
 Encode spaces and other special characters in values, such as `%20` for a space and `%23` for `#`.
 
@@ -49,7 +49,7 @@ label stands alone.
 | ![Love](https://badges.hoppou.dev/badge?style=pill&label=love&color=e11d48&icon=lucide:heart)           | `style=pill&label=love&color=e11d48&icon=lucide:heart` |
 
 The `title` and `label` are each limited to 64 characters. Text is drawn with the badge's own fonts,
-which cover Latin letters, with accents, and common punctuation; any other character, such as an
+which cover Latin letters, with accents, and common punctuation. Any other character, such as an
 emoji or a Cyrillic letter, returns `400`.
 
 ## Examples

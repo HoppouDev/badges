@@ -49,7 +49,7 @@ GitHub READMEs render HTML too, which is handy for centring a row of badges:
 - Pill badges with the default `theme=auto` follow the viewer's light or dark mode. To match
   GitHub's own theme setting exactly, see [Themes](/docs/badges/themes#auto).
 - GitHub serves README images through its own image proxy, which caches them. A badge can take a
-  while to update after you change it; changing the URL shows the new one at once.
+  while to update after you change it. Changing the URL shows the new one at once.
 
 ## Alt text
 

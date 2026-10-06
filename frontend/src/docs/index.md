@@ -5,7 +5,7 @@ order: 0
 ---
 
 Badges for READMEs and websites, served from `https://badges.hoppou.dev`. Every badge is a plain
-URL, so it works anywhere an image does: READMEs, websites, issue templates.
+URL, so it works anywhere an image does, issue templates included.
 
 ![Built with Rust](https://badges.hoppou.dev/badge?style=pill&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust)
 ![Deployed on Cloudflare](https://badges.hoppou.dev/badge?style=pill&title=Deployed%20on&label=Cloudflare&color=f38020&icon=simple:cloudflare)
@@ -35,7 +35,7 @@ Pick one with `style`, and a size with `size=cozy` (the default) or `size=compac
   [Devin's Badges](https://github.com/intergrav/devins-badges).
 - **`pill`** is a rounded chip painted with one gradient, on a transparent background.
 
-Both follow the viewer's light or dark mode, so one URL suits both GitHub themes; see
+Both follow the viewer's light or dark mode, so one URL suits both GitHub themes. See
 [Themes](/docs/badges/themes).
 
 Icons come from [Simple Icons](https://simpleicons.org) with `icon=simple:<slug>` or
