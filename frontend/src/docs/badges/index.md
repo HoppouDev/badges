@@ -25,7 +25,7 @@ Only `label` is required.
 | `title`      | Smaller text before the label; omit it for a label-only badge                       |
 | `style`      | `devin` (default) or `pill`; see [Styles and sizes](/docs/badges/styles)            |
 | `size`       | `cozy` (default) or `compact`                                                       |
-| `theme`      | Pill only: `auto` (default), `dark` or `light`; see [Themes](/docs/badges/themes)   |
+| `theme`      | `auto` (default), `dark` or `light`; see [Themes](/docs/badges/themes)              |
 | `color`      | Accent colour (default `f1f1f1`); see [Colours](/docs/badges/colours)               |
 | `color2`     | Second accent colour                                                                |
 | `titleColor` | Devin only: title colour                                                            |

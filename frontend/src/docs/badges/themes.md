@@ -4,18 +4,24 @@ section: Badges
 order: 12
 ---
 
-[Pill badges](/docs/badges/styles#pill) have a transparent background, so they take on the page
-behind them. `theme` picks colours that suit it. Devin badges carry their own dark background and
-ignore `theme`.
+`theme` picks colours that suit the page a badge sits on, in both [styles](/docs/badges/styles). By
+default, `auto`, a badge follows the viewer's light or dark mode.
 
-| Theme            | Badge                                                                                                 | For                                      |
-| ---------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `auto` (default) | ![Auto](https://badges.hoppou.dev/badge?style=pill&title=license&label=MIT&color=fbbf24)              | Pages that can be either, such as GitHub |
-| `dark`           | ![Dark](https://badges.hoppou.dev/badge?style=pill&theme=dark&title=license&label=MIT&color=fbbf24)   | Dark pages                               |
-| `light`          | ![Light](https://badges.hoppou.dev/badge?style=pill&theme=light&title=license&label=MIT&color=fbbf24) | Light pages                              |
+| Theme            | Devin                                                                                                        | Pill                                                                                                  | For                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `auto` (default) | ![Auto](https://badges.hoppou.dev/badge?title=License&label=MIT&color=fbbf24&icon=lucide:scale)              | ![Auto](https://badges.hoppou.dev/badge?style=pill&title=license&label=MIT&color=fbbf24)              | Pages that can be either, such as GitHub |
+| `dark`           | ![Dark](https://badges.hoppou.dev/badge?theme=dark&title=License&label=MIT&color=fbbf24&icon=lucide:scale)   | ![Dark](https://badges.hoppou.dev/badge?style=pill&theme=dark&title=license&label=MIT&color=fbbf24)   | Dark pages                               |
+| `light`          | ![Light](https://badges.hoppou.dev/badge?theme=light&title=License&label=MIT&color=fbbf24&icon=lucide:scale) | ![Light](https://badges.hoppou.dev/badge?style=pill&theme=light&title=license&label=MIT&color=fbbf24) | Light pages                              |
 
-Each theme tones `color` and `color2`: lighter on dark pages and darker on light ones, only as far
-as needed to stay readable. So any colour works on both.
+- **Devin** `dark` is the original [Devin's Badges](https://github.com/intergrav/devins-badges)
+  design. `light` is a pale variant: a near-white background tinted with `color`, a faint dark
+  border and a softer shadow.
+- **Pill** badges have a transparent background, so the theme only changes the colours drawn over
+  the page.
+
+In the light theme, `color`, `color2`, `titleColor` and `iconColor` are darkened as far as needed to
+stay readable on a light background; the pill's dark theme lightens them likewise. So any colour
+works in both.
 
 ## auto
 
@@ -30,17 +36,18 @@ set to. To show a fixed badge for each GitHub theme instead, use a `<picture>`:
 <picture>
 	<source
 		media="(prefers-color-scheme: light)"
-		srcset="https://badges.hoppou.dev/badge?style=pill&theme=light&label=MIT"
+		srcset="https://badges.hoppou.dev/badge?theme=light&title=License&label=MIT"
 	/>
-	<img alt="License MIT" src="https://badges.hoppou.dev/badge?style=pill&theme=dark&label=MIT" />
+	<img alt="License MIT" src="https://badges.hoppou.dev/badge?theme=dark&title=License&label=MIT" />
 </picture>
 ```
 
 [Image formats](/docs/badges/formats) other than SVG can't switch, so they render `auto` as `dark`.
+For a Devin badge that's the original design.
 
 ## With a background
 
-A pill with its own `bg` no longer sits on the page, so `auto` picks whichever theme suits that fill
+A badge with its own `bg` brings its own backdrop, so `auto` picks whichever theme suits that fill
 instead of switching, in every format.
 
 ![Dark fill](https://badges.hoppou.dev/badge?style=pill&title=fill&label=dark&color=fbbf24&bg=1e1e2e)

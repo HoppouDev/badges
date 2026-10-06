@@ -26,8 +26,8 @@ Raster images are drawn once, at the badge's natural size, so they lose three th
 
 - **Sharpness:** they're as tall as the badge (Devin 56px cozy or 40px compact, pill 44px or 34px),
   so they can look soft on high-DPI screens.
-- **Themes:** they can't follow the viewer's light or dark mode, so pill badges with `theme=auto`
-  render as `dark`; see [Themes](/docs/badges/themes).
+- **Themes:** they can't follow the viewer's light or dark mode, so badges with `theme=auto` render
+  as `dark`; see [Themes](/docs/badges/themes).
 - **Animation:** the turning icon on a running [workflow status badge](/docs/ci#states) stands
   still.
 

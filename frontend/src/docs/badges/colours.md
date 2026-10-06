@@ -20,8 +20,9 @@ Colours accept hex with or without `#` (encode `#` as `%23`), `rgb()`, `hsl()` o
 
 ### Accent
 
-`color` sets the label and icon. The background is derived from it: a dark, tinted gradient for
-saturated colours, and a neutral one for greys.
+`color` sets the label and icon. The background is derived from it: a tinted gradient for saturated
+colours, and a neutral one for greys, dark in the dark [theme](/docs/badges/themes) and near-white
+in the light one.
 
 ![Rust](https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=simple:rust)
 ![Go](https://badges.hoppou.dev/badge?title=Built%20with&label=Go&color=00add8&icon=simple:go)
@@ -40,8 +41,8 @@ GET /badge?title=Built%20with&label=Gradients&color=f472b6&color2=8b5cf6
 
 ### Title and icon
 
-`titleColor` changes the title, which is otherwise a light grey, and `iconColor` changes a `simple:`
-or `lucide:` icon, which otherwise matches `color`.
+`titleColor` changes the title, which is otherwise light grey in the dark theme and dark grey in the
+light one, and `iconColor` changes a `simple:` or `lucide:` icon, which otherwise matches `color`.
 
 ![Title colour](https://badges.hoppou.dev/badge?title=Powered%20by&label=Coffee&color=d97706&titleColor=fcd34d)
 ![Icon colour](https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=ffffff&icon=simple:rust&iconColor=f74c00)

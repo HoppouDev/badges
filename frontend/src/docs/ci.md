@@ -30,7 +30,7 @@ repositories are served.
 | `state`   | Show this [state](#states) without asking GitHub; see [Previewing](#previewing)     |
 | `style`   | `devin` (default) or `pill`; see [Styles and sizes](/docs/badges/styles)            |
 | `size`    | `cozy` (default) or `compact`                                                       |
-| `theme`   | Pill only: `auto` (default), `dark` or `light`; see [Themes](/docs/badges/themes)   |
+| `theme`   | `auto` (default), `dark` or `light`; see [Themes](/docs/badges/themes)              |
 | `format`  | `svg` (default), `png`, `avif` or `webp`; see [Image formats](/docs/badges/formats) |
 
 The badge reports the latest run triggered by `event`, so pull requests from forks can't change a

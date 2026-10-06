@@ -31,11 +31,12 @@ Pick one with `style`, and a size with `size=cozy` (the default) or `size=compac
 | `devin` | ![Devin](https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=simple:rust)           |
 | `pill`  | ![Pill](https://badges.hoppou.dev/badge?style=pill&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust) |
 
-- **`devin`**, the default, is a dark gradient card in the style of
+- **`devin`**, the default, is a gradient card in the style of
   [Devin's Badges](https://github.com/intergrav/devins-badges).
-- **`pill`** is a rounded chip painted with one gradient, on a transparent background. It follows
-  the viewer's light or dark mode, so one URL suits both GitHub themes; see
-  [Themes](/docs/badges/themes).
+- **`pill`** is a rounded chip painted with one gradient, on a transparent background.
+
+Both follow the viewer's light or dark mode, so one URL suits both GitHub themes; see
+[Themes](/docs/badges/themes).
 
 Icons come from [Simple Icons](https://simpleicons.org) with `icon=simple:<slug>` or
 [Lucide](https://lucide.dev/icons) with `icon=lucide:<name>`, or from your own image URL. Badges are

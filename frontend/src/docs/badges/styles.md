@@ -14,9 +14,10 @@ and [workflow status badges](/docs/ci).
 
 ## Devin
 
-The default, after [Devin's Badges](https://github.com/intergrav/devins-badges): a dark gradient
-card with a faint border and a bold label. Its background is derived from `color`, so it looks the
-same on any page.
+The default, after [Devin's Badges](https://github.com/intergrav/devins-badges): a gradient card
+with a faint border and a bold label. Its background is derived from `color`. In the dark theme it's
+the original dark design; the light theme gives a pale variant for light pages; see
+[Themes](/docs/badges/themes).
 
 | Cozy                                                                                    | Compact                                                                                              |
 | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
