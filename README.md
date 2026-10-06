@@ -14,7 +14,8 @@ A silly badges API.
 
 ## Usage
 
-Badges are served at `https://badges.hoppou.dev`. The [docs](https://badges.hoppou.dev/docs) cover every parameter, with examples:
+Badges are served at `https://badges.hoppou.dev`. The [docs](https://badges.hoppou.dev/docs) cover
+every parameter, with examples:
 
 ```http
 GET /badge?style=pill&title=Built%20with&label=Rust&color=f74c00&icon=simple:rust
@@ -30,11 +31,14 @@ Two Cloudflare Workers share `badges.hoppou.dev`:
 | `backend/`  | `badges`      | The badge API (Rust), on the routes `/badge*` and `/ci/*`                      |
 | `frontend/` | `badges-docs` | Everything else (SvelteKit); it holds the Custom Domain, so it is the fallback |
 
-Routes run before a Custom Domain, so badge paths reach the API and all other paths fall through to the frontend. `badge*` also matches paths such as `/badges`, so frontend pages must not start with `/badge`.
+Routes run before a Custom Domain, so badge paths reach the API and all other paths fall through to
+the frontend. `badge*` also matches paths such as `/badges`, so frontend pages must not start with
+`/badge`.
 
 ## Development
 
-The API is the `badges` crate in `backend/`, a member of the Cargo workspace at the repo root. Cargo commands run from the root; `wrangler` runs from `backend/`.
+The API is the `badges` crate in `backend/`, a member of the Cargo workspace at the repo root. Cargo
+commands run from the root; `wrangler` runs from `backend/`.
 
 ```sh
 # Test
@@ -50,9 +54,18 @@ cargo run --example render -- state=running style=pill > running.svg
 cd backend && npx wrangler dev
 ```
 
-The frontend uses pnpm. Its docs are Markdown files in `frontend/src/docs/`, served under `/docs` (`index.md` is `/docs`, `foo.md` is `/docs/foo`), turned into HTML with [remark](https://github.com/remarkjs/remark) and [remark-rehype](https://github.com/remarkjs/remark-rehype) and prerendered at build time.
+The frontend uses pnpm. Its docs are Markdown files in `frontend/src/docs/`, served under `/docs`
+(`index.md` is `/docs`, `foo.md` is `/docs/foo`), turned into HTML with
+[remark](https://github.com/remarkjs/remark) and
+[remark-rehype](https://github.com/remarkjs/remark-rehype) and prerendered at build time.
 
-Each doc starts with a frontmatter block. `title` is the page's heading, its browser title and its sidebar link, so docs don't write their own top-level heading; `section` is the sidebar group it sits under, and the optional `order` (default `0`, lowest first, ties sorted by title) positions it; sections follow the order of their first page. The build fails if `title` or `section` is missing, `order` is not a finite number, a doc has a top-level heading (`# Title`, or `Title` underlined with `===`), or two files map to the same URL (such as `foo.md` and `foo/index.md`). `/` redirects to `/docs`.
+Each doc starts with a frontmatter block. `title` is the page's heading, its browser title and its
+sidebar link, so docs don't write their own top-level heading; `section` is the sidebar group it
+sits under, and the optional `order` (default `0`, lowest first, ties sorted by title) positions it;
+sections follow the order of their first page. The build fails if `title` or `section` is missing,
+`order` is not a finite number, a doc has a top-level heading (`# Title`, or `Title` underlined with
+`===`), or two files map to the same URL (such as `foo.md` and `foo/index.md`). `/` redirects to
+`/docs`.
 
 ```markdown
 ---
@@ -61,7 +74,8 @@ section: Getting started
 ---
 ```
 
-An image's Markdown title becomes a caption below it, for an image on its own line or alone in a table cell (anywhere else fails the build):
+An image's Markdown title becomes a caption below it, for an image on its own line or alone in a
+table cell (anywhere else fails the build):
 
 ```markdown
 ![Built with Rust](https://badges.hoppou.dev/badge?label=Rust "Built with Rust")
@@ -75,7 +89,13 @@ pnpm dev
 
 ## Releasing
 
-Pushing a `v*` tag deploys both Workers (the API from `backend/`, the frontend from `frontend/`) and, once both succeed, publishes a GitHub release with notes from [git-cliff](https://git-cliff.org). The tag must match the `backend/Cargo.toml` version, so cut releases with [cargo-release](https://github.com/crate-ci/cargo-release) (`cargo binstall cargo-release`), configured in `release.toml`. From the repo root, it bumps the version in `backend/Cargo.toml` and `Cargo.lock`, commits, tags and pushes, and only dry-runs without `--execute`:
+Pushing a `v*` tag deploys both Workers (the API from `backend/`, the frontend from `frontend/`)
+and, once both succeed, publishes a GitHub release with notes from
+[git-cliff](https://git-cliff.org). The tag must match the `backend/Cargo.toml` version, so cut
+releases with [cargo-release](https://github.com/crate-ci/cargo-release)
+(`cargo binstall cargo-release`), configured in `release.toml`. From the repo root, it bumps the
+version in `backend/Cargo.toml` and `Cargo.lock`, commits, tags and pushes, and only dry-runs
+without `--execute`:
 
 ```sh
 # Suggested bump from conventional commits since the last tag
@@ -109,4 +129,8 @@ Never commit tokens: `backend/.dev.vars` is ignored by git, and production uses 
 
 This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md).
 
-The bundled Inter and JetBrains Mono fonts are licensed under the SIL Open Font License ([Inter](backend/assets/fonts/LICENSE.txt), [JetBrains Mono](backend/assets/fonts/LICENSE-JetBrainsMono.txt)). Icons come from [Simple Icons](https://simpleicons.org) (CC0) and [Lucide](https://lucide.dev) (ISC, [bundled marks](backend/assets/icons/LICENSE-lucide.txt)).
+The bundled Inter and JetBrains Mono fonts are licensed under the SIL Open Font License
+([Inter](backend/assets/fonts/LICENSE.txt),
+[JetBrains Mono](backend/assets/fonts/LICENSE-JetBrainsMono.txt)). Icons come from
+[Simple Icons](https://simpleicons.org) (CC0) and [Lucide](https://lucide.dev) (ISC,
+[bundled marks](backend/assets/icons/LICENSE-lucide.txt)).

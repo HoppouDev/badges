@@ -4,7 +4,8 @@ section: Badges
 order: 13
 ---
 
-Colours accept hex with or without `#` (encode `#` as `%23`), `rgb()`, `hsl()` or CSS names such as `rebeccapurple`. The two [styles](/docs/badges/styles) use them differently.
+Colours accept hex with or without `#` (encode `#` as `%23`), `rgb()`, `hsl()` or CSS names such as
+`rebeccapurple`. The two [styles](/docs/badges/styles) use them differently.
 
 | Parameter    | Devin                           | Pill                  |
 | ------------ | ------------------------------- | --------------------- |
@@ -19,7 +20,8 @@ Colours accept hex with or without `#` (encode `#` as `%23`), `rgb()`, `hsl()` o
 
 ### Accent
 
-`color` sets the label and icon. The background is derived from it: a dark, tinted gradient for saturated colours, and a neutral one for greys.
+`color` sets the label and icon. The background is derived from it: a dark, tinted gradient for
+saturated colours, and a neutral one for greys.
 
 ![Rust](https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=f74c00&icon=simple:rust)
 ![Go](https://badges.hoppou.dev/badge?title=Built%20with&label=Go&color=00add8&icon=simple:go)
@@ -38,7 +40,8 @@ GET /badge?title=Built%20with&label=Gradients&color=f472b6&color2=8b5cf6
 
 ### Title and icon
 
-`titleColor` changes the title, which is otherwise a light grey, and `iconColor` changes a `simple:` or `lucide:` icon, which otherwise matches `color`.
+`titleColor` changes the title, which is otherwise a light grey, and `iconColor` changes a `simple:`
+or `lucide:` icon, which otherwise matches `color`.
 
 ![Title colour](https://badges.hoppou.dev/badge?title=Powered%20by&label=Coffee&color=d97706&titleColor=fcd34d)
 ![Icon colour](https://badges.hoppou.dev/badge?title=Built%20with&label=Rust&color=ffffff&icon=simple:rust&iconColor=f74c00)
@@ -49,7 +52,8 @@ GET /badge?title=Powered%20by&label=Coffee&color=d97706&titleColor=fcd34d
 
 ### Background
 
-`bg` alone gives a flat background; add `bg2` for a gradient from `bg` at the top to `bg2` at the bottom. `bg2` alone keeps the derived top and replaces only the bottom.
+`bg` alone gives a flat background; add `bg2` for a gradient from `bg` at the top to `bg2` at the
+bottom. `bg2` alone keeps the derived top and replaces only the bottom.
 
 | Badge                                                                                                          | Query                               |
 | -------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
@@ -59,7 +63,10 @@ GET /badge?title=Powered%20by&label=Coffee&color=d97706&titleColor=fcd34d
 
 ## Pill
 
-A pill badge is drawn in one colour and painted with a single gradient across its whole width, from `color` on the left to `color2` on the right. The outline, chip, icon, title and label all take the colour of the gradient where they sit, so the text shades along with it. Without `color2`, the gradient ends on `color` with its hue turned a little.
+A pill badge is drawn in one colour and painted with a single gradient across its whole width, from
+`color` on the left to `color2` on the right. The outline, chip, icon, title and label all take the
+colour of the gradient where they sit, so the text shades along with it. Without `color2`, the
+gradient ends on `color` with its hue turned a little.
 
 ![Pink to violet](https://badges.hoppou.dev/badge?style=pill&title=gradient&label=pink%20to%20violet&color=f472b6&color2=8b5cf6)
 ![Hue turned](https://badges.hoppou.dev/badge?style=pill&title=gradient&label=one%20colour&color=34d399)
@@ -68,4 +75,6 @@ A pill badge is drawn in one colour and painted with a single gradient across it
 GET /badge?style=pill&title=gradient&label=pink%20to%20violet&color=f472b6&color2=8b5cf6
 ```
 
-The [theme](/docs/badges/themes) tones both ends to stay readable on the page. The background is transparent, apart from a faint tint of the gradient; `bg` fills it with a solid colour instead. An image icon keeps its own colours.
+The [theme](/docs/badges/themes) tones both ends to stay readable on the page. The background is
+transparent, apart from a faint tint of the gradient; `bg` fills it with a solid colour instead. An
+image icon keeps its own colours.

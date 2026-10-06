@@ -6,7 +6,8 @@ order: 30
 
 ## Errors
 
-Errors come back as plain text with an HTTP status, so a broken badge URL shows its reason when opened directly.
+Errors come back as plain text with an HTTP status, so a broken badge URL shows its reason when
+opened directly.
 
 | Status | When                                                                                                                                                                                        |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,4 +35,6 @@ Errors come back as plain text with an HTTP status, so a broken badge URL shows 
 | Invalid custom badge requests (`4xx`)          | 5 minutes | 5 minutes       |
 | Other custom badge errors (`5xx`)              | never     | never           |
 
-A custom badge is cached for its URL. When the service is updated, an old copy can keep showing for up to a day in browsers and a week at the edge; changing the URL, for example by adding `&v=2`, gets the new badge at once.
+A custom badge is cached for its URL. When the service is updated, an old copy can keep showing for
+up to a day in browsers and a week at the edge; changing the URL, for example by adding `&v=2`, gets
+the new badge at once.

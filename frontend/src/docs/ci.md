@@ -17,7 +17,8 @@ GET /ci/{owner}/{repo}/{workflow}
 ![CI](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill)
 ```
 
-`{workflow}` is the workflow's file name, such as `rust.yml`, or its numeric id. Only public repositories are served.
+`{workflow}` is the workflow's file name, such as `rust.yml`, or its numeric id. Only public
+repositories are served.
 
 ## Parameters
 
@@ -32,7 +33,8 @@ GET /ci/{owner}/{repo}/{workflow}
 | `theme`   | Pill only: `auto` (default), `dark` or `light`; see [Themes](/docs/badges/themes)   |
 | `format`  | `svg` (default), `png`, `avif` or `webp`; see [Image formats](/docs/badges/formats) |
 
-The badge reports the latest run triggered by `event`, so pull requests from forks can't change a badge that follows `push` runs.
+The badge reports the latest run triggered by `event`, so pull requests from forks can't change a
+badge that follows `push` runs.
 
 | Badge                                                                                    | Query                    |
 | ---------------------------------------------------------------------------------------- | ------------------------ |
@@ -43,7 +45,8 @@ The badge reports the latest run triggered by `event`, so pull requests from for
 
 ## States
 
-States are coloured like GitHub's own status icons. Devin badges show the GitHub Actions logo; pill badges show a mark for the state instead.
+States are coloured like GitHub's own status icons. Devin badges show the GitHub Actions logo; pill
+badges show a mark for the state instead.
 
 | State     | The run                   | Devin                                                                                | Pill                                                                                            |
 | --------- | ------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
@@ -54,11 +57,14 @@ States are coloured like GitHub's own status icons. Devin badges show the GitHub
 | Skipped   | Was skipped or neutral    | ![Skipped](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=skipped)     | ![Skipped](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=skipped&style=pill)     |
 | Unknown   | None yet, or unrecognised | ![Unknown](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=unknown)     | ![Unknown](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?state=unknown&style=pill)     |
 
-The pill's running icon turns. It stands still in raster [image formats](/docs/badges/formats) and for viewers who ask for reduced motion.
+The pill's running icon turns. It stands still in raster [image formats](/docs/badges/formats) and
+for viewers who ask for reduced motion.
 
 ## Previewing
 
-`state` shows a state without waiting for a run: `passing`, `failing`, `running`, `cancelled`, `skipped` or `unknown`. GitHub isn't asked, so the repository and workflow aren't checked either, only their spelling. The table above is made this way.
+`state` shows a state without waiting for a run: `passing`, `failing`, `running`, `cancelled`,
+`skipped` or `unknown`. GitHub isn't asked, so the repository and workflow aren't checked either,
+only their spelling. The table above is made this way.
 
 ```http
 GET /ci/HoppouDev/badges/rust.yml?style=pill&state=running
@@ -66,4 +72,5 @@ GET /ci/HoppouDev/badges/rust.yml?style=pill&state=running
 
 ## Freshness
 
-Status badges are cached for a minute, so a new run can take that long to show. A repository that has been renamed returns `400`; use its new name.
+Status badges are cached for a minute, so a new run can take that long to show. A repository that
+has been renamed returns `400`; use its new name.

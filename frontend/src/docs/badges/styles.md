@@ -4,7 +4,8 @@ section: Badges
 order: 11
 ---
 
-`style` picks a badge's design and `size` its height. Both work for [custom badges](/docs/badges) and [workflow status badges](/docs/ci).
+`style` picks a badge's design and `size` its height. Both work for [custom badges](/docs/badges)
+and [workflow status badges](/docs/ci).
 
 | Style   | Cozy (default)                                                                                                                | Compact                                                                                                                                    |
 | ------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -13,7 +14,9 @@ order: 11
 
 ## Devin
 
-The default, after [Devin's Badges](https://github.com/intergrav/devins-badges): a dark gradient card with a faint border and a bold label. Its background is derived from `color`, so it looks the same on any page.
+The default, after [Devin's Badges](https://github.com/intergrav/devins-badges): a dark gradient
+card with a faint border and a bold label. Its background is derived from `color`, so it looks the
+same on any page.
 
 | Cozy                                                                                    | Compact                                                                                              |
 | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -25,7 +28,10 @@ The default, after [Devin's Badges](https://github.com/intergrav/devins-badges):
 
 ## Pill
 
-A rounded chip with monospace text on a transparent background. One gradient paints the whole badge, text included, from `color` on the left to `color2` on the right; see [Pill colours](/docs/badges/colours#pill). It adapts to light and dark pages; see [Themes](/docs/badges/themes).
+A rounded chip with monospace text on a transparent background. One gradient paints the whole badge,
+text included, from `color` on the left to `color2` on the right; see
+[Pill colours](/docs/badges/colours#pill). It adapts to light and dark pages; see
+[Themes](/docs/badges/themes).
 
 ```http
 GET /badge?style=pill&title=release&label=v2.4.1&color=60a5fa&icon=lucide:tag
@@ -37,11 +43,13 @@ GET /badge?style=pill&title=release&label=v2.4.1&color=60a5fa&icon=lucide:tag
 | ![Operational](https://badges.hoppou.dev/badge?style=pill&label=operational&color=34d399)                      | ![Operational](https://badges.hoppou.dev/badge?style=pill&size=compact&label=operational&color=34d399)                      |
 | ![CI](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill)                                       | ![CI](https://badges.hoppou.dev/ci/HoppouDev/badges/rust.yml?style=pill&size=compact)                                       |
 
-- **Cozy** is 44px tall. The icon and the title, in capitals, sit in a tinted chip on the left, and the label follows.
+- **Cozy** is 44px tall. The icon and the title, in capitals, sit in a tinted chip on the left, and
+  the label follows.
 - **Compact** is 34px tall. The icon, if there is one, leads the title and label on one line.
 
 ## Older URLs
 
-Before styles existed, `style` chose the size, so `style=cozy` and `style=compact` still mean the Devin style at that size. An explicit `size` wins over them.
+Before styles existed, `style` chose the size, so `style=cozy` and `style=compact` still mean the
+Devin style at that size. An explicit `size` wins over them.
 
 Names are case-insensitive, and an unknown `style` or `size` returns `400`.

@@ -38,7 +38,8 @@ Encode spaces and other special characters in values, such as `%20` for a space 
 
 ## Title and label
 
-With a `title`, Devin badges stack it above the label and pill badges lead with it. Without one, the label stands alone.
+With a `title`, Devin badges stack it above the label and pill badges lead with it. Without one, the
+label stands alone.
 
 | Badge                                                                                                   | Query                                                  |
 | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
@@ -47,7 +48,9 @@ With a `title`, Devin badges stack it above the label and pill badges lead with 
 | ![Made with love](https://badges.hoppou.dev/badge?style=pill&title=made%20with&label=love&color=e11d48) | `style=pill&title=made%20with&label=love&color=e11d48` |
 | ![Love](https://badges.hoppou.dev/badge?style=pill&label=love&color=e11d48&icon=lucide:heart)           | `style=pill&label=love&color=e11d48&icon=lucide:heart` |
 
-The `title` and `label` are each limited to 64 characters. Text is drawn with the badge's own fonts, which cover Latin letters, with accents, and common punctuation; any other character, such as an emoji or a Cyrillic letter, returns `400`.
+The `title` and `label` are each limited to 64 characters. Text is drawn with the badge's own fonts,
+which cover Latin letters, with accents, and common punctuation; any other character, such as an
+emoji or a Cyrillic letter, returns `400`.
 
 ## Examples
 
