@@ -5,6 +5,6 @@ rules:
   # GitHub Actions uses the `on:` key
   truthy:
     check-keys: false
-  # Prettier formats YAML and puts one space before inline comments
+  # One space before inline comments, as in the existing files
   comments:
     min-spaces-from-content: 1

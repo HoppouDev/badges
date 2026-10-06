@@ -19,13 +19,12 @@
    which a class can't match). Utilities are ctp-*; plain CSS reads the
    --catppuccin-color-* variables, since the theme is inline and emits no
    --color-ctp-* variables */
+/* biome-ignore lint/correctness/noInvalidPositionAtImportRule: must follow the dark variant and the cleared palette above */
 @import '@catppuccin/tailwindcss/mocha.css';
 
-/* The class is tw-prose. Prettier lowercases CSS property names, which would
-   hide the option from the plugin */
-/* prettier-ignore */
+/* The class is tw-prose */
 @plugin '@tailwindcss/typography' {
-   className: tw-prose;
+	className: tw-prose;
 }
 
 /* shadcn tokens in Catppuccin colours. The --catppuccin-color-* variables

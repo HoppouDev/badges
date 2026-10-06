@@ -19,6 +19,7 @@
 	class="mx-auto tw-prose w-full px-4 py-8 wrap-break-word [&_p_img]:my-1 [&_p_img]:inline [&_p_img]:align-middle [&_td]:wrap-anywhere [&_td_figure]:my-0 [&_td_img]:my-0 [&_td,&_th]:align-middle"
 >
 	<h1>{data.title}</h1>
+	<!-- The HTML is rendered at build time from the repo's own Markdown docs -->
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html data.html}
 </article>
