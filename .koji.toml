@@ -1,0 +1,2 @@
+# koji: interactive conventional commits, run by the prek prepare-commit-msg hook
+autocomplete = true
