@@ -1,8 +1,0 @@
-# cargo-release: `cargo release [patch|minor|major|X.Y.Z] --execute`
-# Pushing the tag deploys and publishes git-cliff release notes
-allow-branch = ["main"]
-publish = false
-tag-name = "v{{version}}"
-tag-message = "{{tag_name}}"
-# Matched by cliff.toml so release commits stay out of the notes
-pre-release-commit-message = "chore(release): prepare for v{{version}}"

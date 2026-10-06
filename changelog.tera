@@ -1,0 +1,24 @@
+{#- Release notes for `cog changelog --at <tag>`: one section per commit type,
+    ordered by `order` in cog.toml, oldest commit first. Version bumps,
+    release prep and dependency/PR housekeeping are left out -#}
+{%- set hidden_scopes = ["version", "release", "deps", "pr", "pull"] -%}
+{%- if version.tag -%}
+## [{{ version.tag | trim_start_matches(pat="v") }}] - {{ date | date(format="%Y-%m-%d") }}
+{%- else -%}
+## [unreleased]
+{%- endif %}
+{% for type_group in commits | group_by_type %}
+{%- set_global shown = [] -%}
+{%- for commit in type_group.1 -%}
+{%- if not commit.scope or not commit.scope in hidden_scopes -%}
+{%- set_global shown = shown | concat(with=commit) -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if shown | length > 0 %}
+### {{ type_group.0 }}
+
+{% for commit in shown | reverse -%}
+- {% if commit.scope %}*({{ commit.scope }})* {% endif %}{% if commit.breaking_change %}[**breaking**] {% endif %}{{ commit.summary | upper_first }}
+{% endfor -%}
+{%- endif -%}
+{% endfor %}

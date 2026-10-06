@@ -115,13 +115,25 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Generate release notes
-        # yamllint disable-line rule:line-length
-        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
-        with:
-          args: --current --strip header
+      - name: Install cocogitto
         env:
-          OUTPUT: RELEASE_NOTES.md
+          COG_VERSION: 7.0.0
+          # yamllint disable-line rule:line-length
+          COG_SHA256: e03938ff2c4c86d71c00c0f3284dbbe95c5ca76fe34a51f33e945c23010d59bb
+          TARGET: x86_64-unknown-linux-musl
+        run: |
+          tar="cocogitto-$COG_VERSION-$TARGET.tar.gz"
+          base=https://github.com/cocogitto/cocogitto/releases/download
+          curl -fsSLo "$RUNNER_TEMP/$tar" "$base/$COG_VERSION/$tar"
+          echo "$COG_SHA256  $RUNNER_TEMP/$tar" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$tar" -C "$RUNNER_TEMP" \
+            --strip-components=1 "$TARGET/cog"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Generate release notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: cog changelog --at "$TAG" > "$RUNNER_TEMP/notes.md"
 
       - name: Publish release
         env:
@@ -129,4 +141,4 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: >-
           gh release create "$TAG" --verify-tag --title "$TAG"
-          --notes-file RELEASE_NOTES.md
+          --notes-file "$RUNNER_TEMP/notes.md"

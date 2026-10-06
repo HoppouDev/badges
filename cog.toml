@@ -1,0 +1,26 @@
+# cocogitto: `cog bump --auto` (or --patch, --minor, --major, --version X.Y.Z)
+# Pushing the tag deploys and publishes release notes from changelog.tera
+tag_prefix = "v"
+branch_whitelist = ["main"]
+# Release notes live on GitHub releases, not in a CHANGELOG.md
+disable_changelog = true
+# The deploy workflow checks the tag against backend/Cargo.toml
+pre_bump_hooks = ["cargo release version {{version}} --execute --no-confirm"]
+post_bump_hooks = ["git push --atomic origin main {{version_tag}}"]
+
+[changelog]
+template = "changelog.tera"
+
+# Chores and CI share a section; build commits fall under Other
+[commit_types]
+feat = { changelog_title = "🚀 Features", order = 0 }
+fix = { changelog_title = "🐛 Bug Fixes", order = 1 }
+refactor = { changelog_title = "🚜 Refactor", order = 2 }
+docs = { changelog_title = "📚 Documentation", order = 3 }
+perf = { changelog_title = "⚡ Performance", order = 4 }
+style = { changelog_title = "🎨 Styling", order = 5 }
+test = { changelog_title = "🧪 Testing", order = 6 }
+chore = { changelog_title = "⚙️ Miscellaneous Tasks", order = 7 }
+ci = { changelog_title = "⚙️ Miscellaneous Tasks", order = 7 }
+revert = { changelog_title = "◀️ Revert", order = 9 }
+build = { changelog_title = "💼 Other", order = 10 }
